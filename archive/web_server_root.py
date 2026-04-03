@@ -35,7 +35,7 @@ def submit_form():
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': 'An internal error occurred.'
         }), 400
 
 
@@ -54,7 +54,7 @@ def get_pending_reviews():
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': 'An internal error occurred.'
         }), 400
 
 
@@ -74,7 +74,7 @@ def get_submissions():
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': 'An internal error occurred.'
         }), 400
 
 
@@ -95,7 +95,7 @@ def mark_reviewed(submission_id):
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': 'An internal error occurred.'
         }), 400
 
 
@@ -125,7 +125,7 @@ def add_data():
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': 'An internal error occurred.'
         }), 400
 
 
@@ -151,7 +151,7 @@ def get_data(category, key):
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': 'An internal error occurred.'
         }), 400
 
 
@@ -171,7 +171,7 @@ def get_category_data(category):
     except Exception as e:
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': 'An internal error occurred.'
         }), 400
 
 

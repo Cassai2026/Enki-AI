@@ -48,7 +48,7 @@ def _print_help() -> None:
                 [
                     "[bold]/help[/bold]   — show this message",
                     "[bold]/reset[/bold]  — clear conversation history",
-                    "[bold]/plugins[/bold]— list available plugins",
+                    "[bold]/plugins[/bold] — list available plugins",
                     "[bold]/stream[/bold] — toggle streaming mode",
                     "[bold]/exit[/bold]   — quit",
                 ]

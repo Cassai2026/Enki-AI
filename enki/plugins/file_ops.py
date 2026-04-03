@@ -108,8 +108,14 @@ class FileListPlugin(Plugin):
             if not p.is_dir():
                 return PluginResult(success=False, output={"error": f"Not a directory: {path!r}"})
             entries = sorted(
-                [{"name": e.name, "type": "dir" if e.is_dir() else "file", "size": e.stat().st_size if e.is_file() else None}
-                 for e in p.iterdir()],
+                [
+                    {
+                        "name": e.name,
+                        "type": "dir" if e.is_dir() else "file",
+                        "size": e.stat().st_size if e.is_file() else None,
+                    }
+                    for e in p.iterdir()
+                ],
                 key=lambda x: x["name"],
             )
             return PluginResult(success=True, output={"path": path, "entries": entries})

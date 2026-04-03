@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S Pilot Scheme Form</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: 'Segoe UI', sans-serif;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: block;
+        }
+
+        @media (max-width: 500px) {
+            .form-row {
+                display: block;
+            }
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status.loading {
+            background: #cce5ff;
+            color: #004085;
+            border: 1px solid #b8daff;
+            display: block;
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 3px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 J.A.R.V.I.S Pilot Scheme</h1>
+        <p class="subtitle">Join the CassAi Pilot Program</p>
+
+        <div class="info-box">
+            <strong>ℹ️ Note:</strong> This form collects pilot scheme applications and stores them in your local JARVIS database. 
+            Make sure the web server is running at <code>http://localhost:5000</code>. Data is stored locally and not shared.
+        </div>
+
+        <form id="jarvisForm">
+            <div class="form-group">
+                <label for="name">Name <span style="color: red;">*</span></label>
+                <input type="text" id="name" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email <span style="color: red;">*</span></label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="story">How do you know the founder of J.A.R.V.I.S - Tell us a story (PG) <span style="color: red;">*</span></label>
+                <textarea id="story" name="story" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="age">Age Bracket <span style="color: red;">*</span></label>
+                <select id="age" name="age" required>
+                    <option value="">-- Select Age Bracket --</option>
+                    <option value="Under 16">Under 16</option>
+                    <option value="16 - 18">16 - 18</option>
+                    <option value="18 - 25">18 - 25</option>
+                    <option value="25 - 40">25 - 40</option>
+                    <option value="40+">40+</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="challenges">What Challenges do you currently have to deal with day to day <span style="color: red;">*</span></label>
+                <textarea id="challenges" name="challenges" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="interested">Why are you interested in J.A.R.V.I.S <span style="color: red;">*</span></label>
+                <textarea id="interested" name="interested" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="meet">How did you meet the founder (Paul/Cass) <span style="color: red;">*</span></label>
+                <textarea id="meet" name="meet" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="autism_adhd">Tell us about your experiences with Autism / ADHD <span style="color: red;">*</span></label>
+                <textarea id="autism_adhd" name="autism_adhd" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="education">1 way you would change the education system tomorrow <span style="color: red;">*</span></label>
+                <textarea id="education" name="education" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="superhero">Which super hero best describes you & What would your 3 superpowers be <span style="color: red;">*</span></label>
+                <textarea id="superhero" name="superhero" required></textarea>
+            </div>
+
+            <button type="submit">Send to JARVIS</button>
+
+            <div id="status" class="status"></div>
+        </form>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/submit-form';
+
+        document.getElementById('jarvisForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const statusDiv = document.getElementById('status');
+
+            // Collect form data - matching Google Form fields
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                story: document.getElementById('story').value,
+                age_bracket: document.getElementById('age').value,
+                challenges: document.getElementById('challenges').value,
+                interested_reason: document.getElementById('interested').value,
+                meet_founder: document.getElementById('meet').value,
+                autism_adhd_experiences: document.getElementById('autism_adhd').value,
+                education_change: document.getElementById('education').value,
+                superhero_description: document.getElementById('superhero').value,
+                submitted_at: new Date().toISOString()
+            };
+
+            // Show loading
+            statusDiv.className = 'status loading';
+            statusDiv.textContent = '⏳ Sending to JARVIS...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        form_name: 'jarvis_pilot_scheme',
+                        data: formData
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    statusDiv.className = 'status success';
+                    statusDiv.innerHTML = `
+                        ✅ <strong>Success!</strong> Your submission has been sent to JARVIS.<br>
+                        Submission ID: <strong>${result.submission_id}</strong><br>
+                        JARVIS will review your application shortly.
+                    `;
+
+                    // Reset form
+                    document.getElementById('jarvisForm').reset();
+
+                    // Hide message after 5 seconds
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                } else {
+                    throw new Error(result.message || 'Unknown error');
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `
+                    ❌ <strong>Error:</strong> ${error.message}<br>
+                    Make sure the web server is running at <strong>http://localhost:5000</strong>
+                `;
+                console.error('Form submission error:', error);
+            }
+        });
+
+        // Auto-hide status after loading
+        const statusDiv = document.getElementById('status');
+        statusDiv.addEventListener('click', () => {
+            statusDiv.style.display = 'none';
+        });
+    </script>
+</body>
+</html>

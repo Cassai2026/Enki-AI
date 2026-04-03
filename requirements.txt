@@ -1,0 +1,32 @@
+# Enki-AI / JARVIS — Python dependencies
+#
+# Install all:
+#   pip install -r requirements.txt
+#
+# Windows-only extras (pycaw, winsound) are listed but may fail on Linux/macOS;
+# they are imported lazily and their absence is handled gracefully.
+
+# ── Voice / audio ─────────────────────────────────────────────────────────────
+SpeechRecognition==3.11.0
+pyttsx3==2.90
+numpy==1.26.4
+soundfile==0.12.1
+# pycaw -- Windows only; install manually: pip install pycaw
+# comtypes -- Windows only; pulled in by pycaw
+
+# ── Web / API ──────────────────────────────────────────────────────────────────
+Flask==3.0.3
+flask-cors==4.0.1
+requests==2.32.3
+beautifulsoup4==4.12.3
+
+# ── GUI ───────────────────────────────────────────────────────────────────────
+PyQt5==5.15.10
+
+# ── Input / keyboard ──────────────────────────────────────────────────────────
+keyboard==0.13.5
+pyautogui==0.9.54
+
+# ── Dev / testing (not required at runtime) ───────────────────────────────────
+pytest==8.2.0
+pytest-cov==5.0.0

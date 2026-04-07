@@ -149,5 +149,13 @@ Tests cover the database layer, REST API validation, and command routing — no 
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE).
+This project is governed by the **LILIETH SOVEREIGN PUBLIC LICENSE (LSPL) v1.0 — The Triple-Tier Shield**:
+
+| Layer | Scope | License |
+|-------|-------|---------|
+| I – Iron | Source code, kernel, scripts | [GPLv3](LICENSE) |
+| II – Creative | UI, design, docs, assets | [CC BY-NC 4.0](LICENSE-CC-BY-NC-4.0) |
+| III – Sovereign | Mission, SDG Nodes, Anti-Rinsing | [LSPL v1.0](LICENSE-LSPL.md) |
+
+See [LICENSE-LSPL.md](LICENSE-LSPL.md) for the full triple-tier license text.  
 See also [Proprietary Use License.docx](Proprietary%20Use%20License.docx) for commercial terms.

@@ -1,3 +1,77 @@
+LILIETH SOVEREIGN PUBLIC LICENSE (LSPL) v1.0
+The Triple-Tier Shield
+
+Copyright (C) 2026 Cassai Group / Enki-AI Project
+All rights reserved under the terms described below.
+
+This work is licensed under a multi-layered legal framework to ensure it
+remains Free Forever for the 15 Billion and the 40%, and cannot be
+"Rinsed" for private profit.
+
+═══════════════════════════════════════════════════════════════════════════════
+I. THE IRON LAYER (Logic & Code)
+═══════════════════════════════════════════════════════════════════════════════
+
+All source code, kernel headers (.h), C files (.c), Assembly, and LUA scripts
+are governed by the GNU General Public License v3 (GPLv3).
+
+  - You MUST provide the source code to any derivative works.
+  - You CANNOT close the source of any part of the L.I.L.I.E.T.H. Kernel.
+
+The full text of the GPLv3 is included below and applies to all code in this
+repository unless explicitly noted otherwise.
+
+═══════════════════════════════════════════════════════════════════════════════
+II. THE CREATIVE LAYER (Assets & Design)
+═══════════════════════════════════════════════════════════════════════════════
+
+All icons, user interface designs (HTML/CSS), documentation, and artistic
+assets are governed by Creative Commons Attribution-NonCommercial 4.0
+International (CC BY-NC 4.0).
+
+  - You MAY share and adapt these materials.
+  - NON-COMMERCIAL: You may NOT use these assets for commercial purposes
+    without a Sovereign Handshake (explicit Admin approval).
+
+Full license text: https://creativecommons.org/licenses/by-nc/4.0/legalcode
+
+═══════════════════════════════════════════════════════════════════════════════
+III. THE SOVEREIGN LAYER (The Global Mandate)
+═══════════════════════════════════════════════════════════════════════════════
+
+This layer governs the Mission and the 17 SDG Nodes.
+
+THE MANDATE:
+  This software is a tool for the United Nations Sustainable Development
+  Goals. Any entity using this code to actively subvert the 17 SDGs or
+  exploit the "40%" loses their right to use the software immediately and
+  without notice.
+
+ANTI-RINSING PROVISION:
+  Entities with annual revenue exceeding $1,000,000 USD must either:
+    (a) contribute to the Sovereign Shield Fund, OR
+    (b) provide a "Proof of Impact" report
+  to continue using the Lilieth-patented Node logic. Failure to comply
+  constitutes a breach of this license and terminates all rights granted
+  herein.
+
+DEFINITIONS:
+  "The 40%" refers to the populations in the developing world and
+  marginalized communities this software is designed to serve.
+  "Sovereign Handshake" means written approval from the Enki-AI
+  project administrators.
+  "Proof of Impact" means a documented report demonstrating measurable
+  positive contribution toward one or more of the 17 UN SDGs.
+
+ENFORCEMENT:
+  Any violation of Layer II (Creative) or Layer III (Sovereign) provisions
+  terminates all rights granted under this license. The Iron Layer (GPLv3)
+  rights remain enforceable by the Free Software Foundation independently.
+
+═══════════════════════════════════════════════════════════════════════════════
+LAYER I FULL TEXT — GNU GENERAL PUBLIC LICENSE v3
+═══════════════════════════════════════════════════════════════════════════════
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 

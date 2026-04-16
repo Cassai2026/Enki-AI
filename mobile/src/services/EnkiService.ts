@@ -32,6 +32,7 @@ export interface GestureControlPacket {
   forensic_data?: ForensicDataEntry | null;         // present on PINCH when DB match found
   detail_level?: 'HIGH';                            // present on STRETCH
   privacy_lock_active?: boolean;                    // true when privacy lock is engaged
+  sovereign_vault_text?: string | null;             // sovereign_vault content to display in DataBubble
 }
 
 export interface EnkiServiceCallbacks {

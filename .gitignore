@@ -15,6 +15,9 @@ env/
 dist/
 build/
 
+# Node / JavaScript
+node_modules/
+
 # Testing
 .pytest_cache/
 .coverage

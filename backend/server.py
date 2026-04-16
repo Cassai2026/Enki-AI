@@ -1063,6 +1063,19 @@ async def _broadcast_audio_to_ws(data_bytes: bytes):
     audio_out_ws_clients.difference_update(disconnected)
 
 
+async def _broadcast_control_to_ws(packet: dict):
+    """Send a JSON control packet (text frame) to all /ws/audio-out clients."""
+    import json as _json
+    payload = _json.dumps(packet)
+    disconnected = set()
+    for ws in audio_out_ws_clients:
+        try:
+            await ws.send_text(payload)
+        except Exception:
+            disconnected.add(ws)
+    audio_out_ws_clients.difference_update(disconnected)
+
+
 @app.websocket("/ws/audio-in")
 async def audio_in_websocket(websocket: WebSocket):
     """
@@ -1116,6 +1129,10 @@ async def audio_out_websocket(websocket: WebSocket):
     Streams synthesized speech (raw PCM) back to the mobile companion app so
     it can play the audio through the Ray-Ban speakers via Bluetooth.
 
+    Also carries JSON text-frame control packets (e.g. gesture coordinates)
+    pushed via _broadcast_control_to_ws() so the mobile HUD can render the
+    Holographic Cursor overlay without a separate WebSocket connection.
+
     Format: 16-bit signed PCM, 24 kHz mono (RECEIVE_SAMPLE_RATE).
     Audio is pushed here by the on_audio_data callback whenever ada.py
     produces audio from Gemini.
@@ -1124,10 +1141,14 @@ async def audio_out_websocket(websocket: WebSocket):
     print("[WS/audio-out] Mobile audio-out client connected.")
     audio_out_ws_clients.add(websocket)
     try:
-        # Keep connection open; data is sent from _broadcast_audio_to_ws()
+        # Keep connection open; outbound data is sent from
+        # _broadcast_audio_to_ws() (binary PCM) and
+        # _broadcast_control_to_ws() (JSON text control packets).
         while True:
-            # Receive and discard any keep-alive pings from the client
-            await websocket.receive_text()
+            # Receive and discard any keep-alive messages from the client.
+            # accept() both text and binary so the loop doesn't raise on pings.
+            msg = await websocket.receive()
+            _ = msg  # intentionally ignored
     except WebSocketDisconnect:
         print("[WS/audio-out] Mobile audio-out client disconnected.")
     except Exception as e:
@@ -1185,10 +1206,52 @@ async def video_in_websocket(websocket: WebSocket):
                 continue
             if audio_loop:
                 asyncio.create_task(audio_loop.send_frame(frame_b64))
+            # Spatial-gesture processing — runs in parallel with Gemini frame
+            # forwarding so vision latency is not increased.
+            asyncio.create_task(_handle_spatial_gesture(frame_b64))
     except WebSocketDisconnect:
         print("[WS/video-in] Mobile camera client disconnected.")
     except Exception as e:
         print(f"[WS/video-in] Error: {e}")
+
+
+async def _handle_spatial_gesture(frame_b64: str) -> None:
+    """
+    Process a single video frame for hand gestures and, if a gesture is found,
+    broadcast a JSON control packet to all /ws/audio-out clients so the mobile
+    HUD can render the Holographic Cursor at the mapped coordinates.
+
+    A PINCH_DETECTED event additionally triggers a LiliethKernel audit via
+    ada.process_spatial_gestures (which logs to the GovernanceEngine).
+    """
+    try:
+        packet = await ada.process_spatial_gestures(frame_b64)
+        if packet is None:
+            return
+
+        gesture = packet.get("gesture", "NONE")
+        if gesture == "NONE":
+            return
+
+        control_packet = {
+            "type": "GESTURE",
+            "gesture": gesture,
+            "x": packet["x"],
+            "y": packet["y"],
+        }
+
+        if gesture == "PINCH":
+            control_packet["event"] = "PINCH_DETECTED"
+            print(
+                f"[SERVER] [SPATIAL] PINCH_DETECTED at "
+                f"({packet['x']:.3f}, {packet['y']:.3f}) — broadcasting to HUD"
+            )
+
+        if audio_out_ws_clients:
+            asyncio.create_task(_broadcast_control_to_ws(control_packet))
+
+    except Exception as exc:
+        print(f"[SERVER] _handle_spatial_gesture error (kernel-safe): {exc}")
 
 
 @sio.event

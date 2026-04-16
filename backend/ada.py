@@ -29,6 +29,113 @@ from tools import tools_list
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from enki_ai.core.governance import engine as governance_engine
 
+# ---------------------------------------------------------------------------
+# Spatial-gesture processing — hand-landmark pipeline for /ws/video-in frames
+# ---------------------------------------------------------------------------
+
+# Lazy-import GestureController so that MediaPipe is only loaded when needed.
+_gesture_controller = None
+
+
+def _get_gesture_controller():
+    """Return the module-level GestureController, creating it on first call."""
+    global _gesture_controller
+    if _gesture_controller is None:
+        try:
+            from hand_movement import GestureController
+            _gesture_controller = GestureController()
+            print("[ADA] GestureController initialised.")
+        except Exception as exc:
+            print(f"[ADA] GestureController unavailable: {exc}")
+    return _gesture_controller
+
+
+# Y-coordinate threshold (normalised 0–1, top of frame = 0) below which a
+# detected pinch is considered to be targeting the HUD zone.
+_HUD_Y_THRESHOLD = 0.35
+
+
+async def process_spatial_gestures(frame_b64: str) -> dict | None:
+    """
+    Decode a base64-encoded JPEG frame from /ws/video-in, run hand-landmark
+    detection, and return a gesture packet (or None if nothing was detected).
+
+    When a PINCH gesture is detected inside the HUD zone (y < ``_HUD_Y_THRESHOLD``),
+    a *LiliethKernel* audit event is logged to the GovernanceEngine so the full
+    decision trail is preserved.
+
+    The function is intentionally kernel-safe: any exception during decoding or
+    inference is caught and logged without propagating to the caller.
+
+    Returns a dict::
+
+        {
+            "type":    "GESTURE",
+            "gesture": str,   # "PINCH" | "STRETCH" | "SHIELD_PALM" | "FIST"
+            "x":       float, # normalised 0–1
+            "y":       float, # normalised 0–1
+        }
+
+    or ``None``.
+    """
+    try:
+        import numpy as np
+
+        controller = _get_gesture_controller()
+        if controller is None:
+            return None
+
+        # Decode base64 → JPEG bytes → numpy BGR array → RGB
+        jpeg_bytes = base64.b64decode(frame_b64)
+        np_buf = np.frombuffer(jpeg_bytes, dtype=np.uint8)
+        bgr_frame = cv2.imdecode(np_buf, cv2.IMREAD_COLOR)
+        if bgr_frame is None:
+            return None
+        rgb_frame = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+
+        # Run gesture detection in a thread so the event loop is not blocked.
+        packet = await asyncio.to_thread(controller.process_frame, rgb_frame)
+
+        if packet is None:
+            return None
+
+        gesture = packet["gesture"]
+        x = packet["x"]
+        y = packet["y"]
+
+        # LiliethKernel audit event: pinch inside HUD zone triggers a
+        # governance-level record for the Architect's spatial decision trail.
+        if gesture == "PINCH" and y < _HUD_Y_THRESHOLD:
+            governance_engine.log_decision(
+                action="lilileth_kernel_spatial_audit",
+                rationale=(
+                    f"Architect pinch detected in HUD zone at ({x:.3f}, {y:.3f}). "
+                    "Spatial interaction recorded per L06 Transparency."
+                ),
+                human_reviewed=True,
+                context={
+                    "event": "PINCH_HUD",
+                    "x": x,
+                    "y": y,
+                    "hud_threshold": _HUD_Y_THRESHOLD,
+                },
+            )
+            print(
+                f"[ADA] [SPATIAL] LiliethKernel audit fired — "
+                f"PINCH in HUD zone at ({x:.3f}, {y:.3f})"
+            )
+
+        return {
+            "type": "GESTURE",
+            "gesture": gesture,
+            "x": x,
+            "y": y,
+        }
+
+    except Exception as exc:
+        print(f"[ADA] process_spatial_gestures error (kernel-safe): {exc}")
+        return None
+
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 SEND_SAMPLE_RATE = 16000

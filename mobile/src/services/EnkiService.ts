@@ -14,6 +14,15 @@ import { io, Socket } from 'socket.io-client';
 export type TranscriptionMessage = { sender: 'User' | 'ADA'; text: string };
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'active';
 
+/** Control packet sent by the backend over /ws/audio-out as a text frame. */
+export interface GestureControlPacket {
+  type: 'GESTURE';
+  gesture: 'PINCH' | 'STRETCH' | 'SHIELD_PALM' | 'FIST' | 'NONE';
+  x: number;   // normalised 0–1 (left → right)
+  y: number;   // normalised 0–1 (top → bottom)
+  event?: 'PINCH_DETECTED';  // present only on PINCH gestures
+}
+
 export interface EnkiServiceCallbacks {
   onStatus?: (msg: string) => void;
   onTranscription?: (msg: TranscriptionMessage) => void;
@@ -178,8 +187,13 @@ class EnkiService {
   /**
    * Open the /ws/audio-out WebSocket.
    * Received PCM bytes are delivered to onPcmReceived.
+   * Optional JSON text-frame control packets (e.g. gesture coordinates) are
+   * delivered to onControlPacket when provided.
    */
-  openAudioOutStream(onPcmReceived: (bytes: ArrayBuffer) => void): Promise<void> {
+  openAudioOutStream(
+    onPcmReceived: (bytes: ArrayBuffer) => void,
+    onControlPacket?: (packet: GestureControlPacket) => void,
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const wsUrl = this.serverUrl.replace(/^http/, 'ws') + '/ws/audio-out';
       this.audioOutWs = new WebSocket(wsUrl);
@@ -191,7 +205,20 @@ class EnkiService {
       };
 
       this.audioOutWs.onmessage = (event) => {
-        onPcmReceived(event.data as ArrayBuffer);
+        if (typeof event.data === 'string') {
+          // JSON control packet (e.g. gesture / cursor coordinates)
+          if (onControlPacket) {
+            try {
+              const packet = JSON.parse(event.data) as GestureControlPacket;
+              onControlPacket(packet);
+            } catch (_) {
+              // Malformed JSON — ignore silently to keep audio flowing.
+            }
+          }
+        } else {
+          // Binary PCM audio data
+          onPcmReceived(event.data as ArrayBuffer);
+        }
       };
 
       this.audioOutWs.onerror = (e) => {

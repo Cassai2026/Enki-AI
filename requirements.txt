@@ -22,3 +22,6 @@ python-dotenv
 mediapipe
 # CAD Generation
 build123d
+# Document ingestion (ingest_mission_data.py)
+python-docx
+PyPDF2

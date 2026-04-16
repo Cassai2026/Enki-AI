@@ -14,13 +14,24 @@ import { io, Socket } from 'socket.io-client';
 export type TranscriptionMessage = { sender: 'User' | 'ADA'; text: string };
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'active';
 
+/** Forensic knowledge entry returned by the backend on a PINCH gesture. */
+export interface ForensicDataEntry {
+  source_file: string;
+  summary: string;
+  pillars: string;
+  gps_hint: string | null;
+}
+
 /** Control packet sent by the backend over /ws/audio-out as a text frame. */
 export interface GestureControlPacket {
-  type: 'GESTURE';
+  type: 'GESTURE' | 'PRIVACY_MODE_ACTIVE';
   gesture: 'PINCH' | 'STRETCH' | 'SHIELD_PALM' | 'FIST' | 'NONE';
   x: number;   // normalised 0–1 (left → right)
   y: number;   // normalised 0–1 (top → bottom)
-  event?: 'PINCH_DETECTED';  // present only on PINCH gestures
+  event?: 'PINCH_DETECTED' | 'STRETCH_DETECTED';  // present on PINCH / STRETCH
+  forensic_data?: ForensicDataEntry | null;         // present on PINCH when DB match found
+  detail_level?: 'HIGH';                            // present on STRETCH
+  privacy_lock_active?: boolean;                    // true when privacy lock is engaged
 }
 
 export interface EnkiServiceCallbacks {

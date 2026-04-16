@@ -4,7 +4,7 @@
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron)
 ![Gemini](https://img.shields.io/badge/Google%20Gemini-Native%20Audio-4285F4?logo=google)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-GPL%20v3-blue) ![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey)
 
 > **Enki AI** — Ultimate ADA Edition. The ADA (Advanced Design Assistant) capability is now fully integrated into the Enki AI platform.
 
@@ -418,6 +418,7 @@ Contributions are welcome! Here's how:
 
 ## 🙏 Acknowledgments
 
+- **Naz (Nazir Louis)** — ADAv2 contribution — the Advanced Design Assistant v2 integration that saved significant development time and made this edition possible 🙌
 - **[Google Gemini](https://deepmind.google/technologies/gemini/)** — Native Audio API for real-time voice
 - **[build123d](https://github.com/gumyr/build123d)** — Modern parametric CAD library
 - **[MediaPipe](https://developers.google.com/mediapipe)** — Hand tracking, gesture recognition, and face authentication
@@ -427,7 +428,11 @@ Contributions are welcome! Here's how:
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+**Code** — GNU General Public License v3 — see the [LICENSE](LICENSE) file for details.
+All source code is free to use, modify, and distribute under GPL v3. **Commercial use is prohibited** without explicit written permission from the copyright holder.
+
+**Creative Assets** (docs, images, UI designs, media) — [Creative Commons BY-NC-SA 4.0](LICENSE-CC).
+Share and adapt freely; give credit to Nazir Louis; no commercial use; share-alike.
 
 ---
 

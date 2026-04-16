@@ -8,7 +8,7 @@ if sys.platform == 'win32':
 
 import socketio
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import asyncio
 import threading
 import sys
@@ -30,6 +30,12 @@ from kasa_agent import KasaAgent
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 app = FastAPI()
 app_socketio = socketio.ASGIApp(sio, app)
+
+# --- Glasses / Network Audio State ---
+# Queue shared between the /ws/audio-in WebSocket and AudioLoop when in glasses mode.
+network_audio_in_queue = None
+# Set of connected /ws/audio-out WebSocket clients that receive synthesized speech.
+audio_out_ws_clients: set = set()
 
 import signal
 
@@ -59,6 +65,7 @@ SETTINGS_FILE = "settings.json"
 
 DEFAULT_SETTINGS = {
     "face_auth_enabled": False, # Default OFF as requested
+    "glasses_mode": False, # Meta Ray-Ban glasses mode (network audio I/O)
     "tool_permissions": {
         "generate_cad": True,
         "run_web_agent": True,
@@ -174,7 +181,7 @@ async def disconnect(sid):
 
 @sio.event
 async def start_audio(sid, data=None):
-    global audio_loop, loop_task
+    global audio_loop, loop_task, network_audio_in_queue
     
     # Optional: Block if not authenticated
     # Only block if auth is ENABLED and not authenticated
@@ -186,14 +193,27 @@ async def start_audio(sid, data=None):
 
     print("Starting Audio Loop...")
     
+    # --- Glasses mode: route audio through the network queues ---
+    glasses_mode = False
+    if data:
+        glasses_mode = data.get('glasses_mode', False)
+    if not glasses_mode:
+        glasses_mode = SETTINGS.get("glasses_mode", False)
+
     device_index = None
     device_name = None
-    if data:
+    if data and not glasses_mode:
         if 'device_index' in data:
             device_index = data['device_index']
         if 'device_name' in data:
             device_name = data['device_name']
-            
+
+    if glasses_mode:
+        network_audio_in_queue = asyncio.Queue(maxsize=200)
+        print("[SERVER] Glasses mode enabled — using network audio input queue.")
+    else:
+        network_audio_in_queue = None
+        
     print(f"Using input device: Name='{device_name}', Index={device_index}")
     
     if audio_loop:
@@ -209,9 +229,11 @@ async def start_audio(sid, data=None):
 
     # Callback to send audio data to frontend
     def on_audio_data(data_bytes):
-        # We need to schedule this on the event loop
-        # This is high frequency, so we might want to downsample or batch if it's too much
+        # Send to desktop frontend via Socket.IO
         asyncio.create_task(sio.emit('audio_data', {'data': list(data_bytes)}))
+        # Also push raw PCM to any connected mobile /ws/audio-out clients
+        if audio_out_ws_clients:
+            asyncio.create_task(_broadcast_audio_to_ws(data_bytes))
 
     # Callback to send CAL data to frontend
     def on_cad_data(data):
@@ -286,7 +308,8 @@ async def start_audio(sid, data=None):
 
             input_device_index=device_index,
             input_device_name=device_name,
-            kasa_agent=kasa_agent
+            kasa_agent=kasa_agent,
+            audio_source_queue=network_audio_in_queue,
         )
         print("AudioLoop initialized successfully.")
 
@@ -957,6 +980,10 @@ async def update_settings(sid, data):
         SETTINGS["camera_flipped"] = data["camera_flipped"]
         print(f"[SERVER] Camera flip set to: {data['camera_flipped']}")
 
+    if "glasses_mode" in data:
+        SETTINGS["glasses_mode"] = data["glasses_mode"]
+        print(f"[SERVER] Glasses mode set to: {data['glasses_mode']}")
+
     save_settings()
     # Broadcast new full settings
     await sio.emit('settings', SETTINGS)
@@ -977,6 +1004,104 @@ async def update_tool_permissions(sid, data):
         audio_loop.update_permissions(SETTINGS["tool_permissions"])
     # Broadcast update to all
     await sio.emit('tool_permissions', SETTINGS["tool_permissions"])
+
+
+# ---------------------------------------------------------------------------
+# Glasses / Network Audio WebSocket Endpoints
+# ---------------------------------------------------------------------------
+
+async def _broadcast_audio_to_ws(data_bytes: bytes):
+    """Send raw PCM bytes to all connected /ws/audio-out WebSocket clients."""
+    disconnected = set()
+    for ws in audio_out_ws_clients:
+        try:
+            await ws.send_bytes(data_bytes)
+        except Exception:
+            disconnected.add(ws)
+    audio_out_ws_clients.difference_update(disconnected)
+
+
+@app.websocket("/ws/audio-in")
+async def audio_in_websocket(websocket: WebSocket):
+    """
+    Receives raw PCM audio from the Meta Ray-Bans mobile companion app.
+    Audio is fed directly into the active Gemini Live session via the
+    network_audio_in_queue that AudioLoop reads from in glasses mode.
+
+    Expected format: 16-bit signed PCM, 16 kHz mono (SEND_SAMPLE_RATE).
+    """
+    global network_audio_in_queue
+    await websocket.accept()
+    print("[WS/audio-in] Mobile audio-in client connected.")
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            if network_audio_in_queue is not None:
+                try:
+                    network_audio_in_queue.put_nowait(data)
+                except asyncio.QueueFull:
+                    pass  # Drop oldest-style: simply skip to avoid back-pressure
+    except WebSocketDisconnect:
+        print("[WS/audio-in] Mobile audio-in client disconnected.")
+    except Exception as e:
+        print(f"[WS/audio-in] Error: {e}")
+
+
+@app.websocket("/ws/audio-out")
+async def audio_out_websocket(websocket: WebSocket):
+    """
+    Streams synthesized speech (raw PCM) back to the mobile companion app so
+    it can play the audio through the Ray-Ban speakers via Bluetooth.
+
+    Format: 16-bit signed PCM, 24 kHz mono (RECEIVE_SAMPLE_RATE).
+    Audio is pushed here by the on_audio_data callback whenever ada.py
+    produces audio from Gemini.
+    """
+    await websocket.accept()
+    print("[WS/audio-out] Mobile audio-out client connected.")
+    audio_out_ws_clients.add(websocket)
+    try:
+        # Keep connection open; data is sent from _broadcast_audio_to_ws()
+        while True:
+            # Receive and discard any keep-alive pings from the client
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        print("[WS/audio-out] Mobile audio-out client disconnected.")
+    except Exception as e:
+        print(f"[WS/audio-out] Error: {e}")
+    finally:
+        audio_out_ws_clients.discard(websocket)
+
+
+@app.websocket("/ws/video-in")
+async def video_in_websocket(websocket: WebSocket):
+    """
+    Receives JPEG video frames from the Meta Ray-Ban camera (via the mobile
+    companion app) and forwards them to the active Gemini Live session for
+    vision tasks (e.g. context-aware responses using what the user sees).
+
+    The client should send either:
+      - Raw JPEG bytes, OR
+      - A base64-encoded JPEG string
+    """
+    await websocket.accept()
+    print("[WS/video-in] Mobile camera client connected.")
+    try:
+        while True:
+            message = await websocket.receive()
+            if "bytes" in message and message["bytes"]:
+                import base64 as _b64
+                frame_b64 = _b64.b64encode(message["bytes"]).decode("utf-8")
+            elif "text" in message and message["text"]:
+                frame_b64 = message["text"]
+            else:
+                continue
+            if audio_loop:
+                asyncio.create_task(audio_loop.send_frame(frame_b64))
+    except WebSocketDisconnect:
+        print("[WS/video-in] Mobile camera client disconnected.")
+    except Exception as e:
+        print(f"[WS/video-in] Error: {e}")
 
 if __name__ == "__main__":
     uvicorn.run(

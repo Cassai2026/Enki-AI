@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Enki Ray-Ban Companion",
+    "slug": "enki-rayban-companion",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0a0a0a"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.enkiai.raybancompanion",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Microphone access is required to stream audio from your Meta Ray-Bans to Enki AI.",
+        "NSBluetoothAlwaysUsageDescription": "Bluetooth access is required to route audio through your Meta Ray-Bans.",
+        "NSBluetoothPeripheralUsageDescription": "Bluetooth access is required to route audio through your Meta Ray-Bans."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0a"
+      },
+      "package": "com.enkiai.raybancompanion",
+      "permissions": [
+        "RECORD_AUDIO",
+        "BLUETOOTH",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_SCAN",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Enki Companion to access your microphone for Ray-Ban audio streaming."
+        }
+      ]
+    ]
+  }
+}

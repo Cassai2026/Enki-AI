@@ -211,7 +211,7 @@ from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
 
 class AudioLoop:
-    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, input_device_index=None, input_device_name=None, output_device_index=None, kasa_agent=None):
+    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, input_device_index=None, input_device_name=None, output_device_index=None, kasa_agent=None, audio_source_queue=None):
         self.video_mode = video_mode
         self.on_audio_data = on_audio_data
         self.on_video_frame = on_video_frame
@@ -227,6 +227,9 @@ class AudioLoop:
         self.input_device_index = input_device_index
         self.input_device_name = input_device_name
         self.output_device_index = output_device_index
+        # When set, audio input is read from this asyncio.Queue instead of a local PyAudio device.
+        # Used in glasses mode where the mobile app streams PCM over WebSocket.
+        self.audio_source_queue = audio_source_queue
 
         self.audio_in_queue = None
         self.out_queue = None
@@ -348,6 +351,50 @@ class AudioLoop:
             await self.session.send(input=msg, end_of_turn=False)
 
     async def listen_audio(self):
+        # --- Glasses / network audio mode ---
+        # When an audio_source_queue is provided, PCM chunks are pushed into it
+        # externally (e.g. by the /ws/audio-in WebSocket endpoint) instead of
+        # being captured from a local PyAudio device.
+        if self.audio_source_queue is not None:
+            print("[ADA] Network audio source active (glasses mode). Skipping local microphone.")
+            VAD_THRESHOLD = 800
+            SILENCE_DURATION = 0.5
+            while True:
+                if self.paused:
+                    await asyncio.sleep(0.1)
+                    continue
+                try:
+                    data = await self.audio_source_queue.get()
+                    if self.out_queue:
+                        await self.out_queue.put({"data": data, "mime_type": "audio/pcm"})
+                    # VAD logic for triggering video frame sends
+                    count = len(data) // 2
+                    if count > 0:
+                        shorts = struct.unpack(f"<{count}h", data)
+                        sum_squares = sum(s ** 2 for s in shorts)
+                        rms = int(math.sqrt(sum_squares / count))
+                    else:
+                        rms = 0
+                    if rms > VAD_THRESHOLD:
+                        self._silence_start_time = None
+                        if not self._is_speaking:
+                            self._is_speaking = True
+                            print(f"[ADA] [VAD/NET] Speech detected (RMS: {rms}). Sending video frame.")
+                            if self._latest_image_payload and self.out_queue:
+                                await self.out_queue.put(self._latest_image_payload)
+                    else:
+                        if self._is_speaking:
+                            if self._silence_start_time is None:
+                                self._silence_start_time = time.time()
+                            elif time.time() - self._silence_start_time > SILENCE_DURATION:
+                                self._is_speaking = False
+                                self._silence_start_time = None
+                except Exception as e:
+                    print(f"[ADA] Error reading from network audio queue: {e}")
+                    await asyncio.sleep(0.1)
+            return  # Never reached, but signals end of network branch
+
+        # --- Local PyAudio mode (default) ---
         mic_info = pya.get_default_input_device_info()
 
         # Resolve Input Device by Name if provided
@@ -1124,19 +1171,28 @@ class AudioLoop:
             raise e
 
     async def play_audio(self):
-        stream = await asyncio.to_thread(
-            pya.open,
-            format=FORMAT,
-            channels=CHANNELS,
-            rate=RECEIVE_SAMPLE_RATE,
-            output=True,
-            output_device_index=self.output_device_index,
-        )
+        try:
+            stream = await asyncio.to_thread(
+                pya.open,
+                format=FORMAT,
+                channels=CHANNELS,
+                rate=RECEIVE_SAMPLE_RATE,
+                output=True,
+                output_device_index=self.output_device_index,
+            )
+        except OSError as e:
+            # In glasses / headless mode there may be no local audio output device.
+            # Audio is still forwarded to remote clients via the on_audio_data callback.
+            print(f"[ADA] [WARN] Could not open local audio output stream: {e}. "
+                  "Audio will be routed via callback only (e.g. to mobile client).")
+            stream = None
+
         while True:
             bytestream = await self.audio_in_queue.get()
             if self.on_audio_data:
                 self.on_audio_data(bytestream)
-            await asyncio.to_thread(stream.write, bytestream)
+            if stream:
+                await asyncio.to_thread(stream.write, bytestream)
 
     async def get_frames(self):
         cap = await asyncio.to_thread(cv2.VideoCapture, 0, cv2.CAP_AVFOUNDATION)

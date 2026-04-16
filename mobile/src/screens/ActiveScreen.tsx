@@ -211,6 +211,81 @@ function SovereignPulseTicker({ latestTranscript }: SovereignPulseTickerProps) {
 }
 
 // ---------------------------------------------------------------------------
+// DataBubble — sovereign_vault terminal feed
+// ---------------------------------------------------------------------------
+
+interface DataBubbleProps {
+  text: string | null;
+}
+
+/**
+ * Renders text from the sovereign_vault in a semi-transparent terminal-style
+ * bubble with a neon-cyan border and a brief Flicker animation on entry.
+ */
+function DataBubble({ text }: DataBubbleProps) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const [visible, setVisible] = useState(false);
+  const [displayText, setDisplayText] = useState<string>('');
+
+  useEffect(() => {
+    if (!text) return;
+
+    setDisplayText(text);
+    setVisible(true);
+    opacity.setValue(0);
+
+    // Flicker: rapid opacity pulses then settle at 0.92
+    Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.9, duration: 60, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.3, duration: 60, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.95, duration: 60, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.4, duration: 60, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.92, duration: 80, useNativeDriver: true }),
+      Animated.delay(5000),
+      Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start(() => setVisible(false));
+  }, [text, opacity]);
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View style={[dataBubbleStyles.bubble, { opacity }]}>
+      <Text style={dataBubbleStyles.header}>▶ SOVEREIGN VAULT</Text>
+      <Text style={dataBubbleStyles.body}>{displayText}</Text>
+    </Animated.View>
+  );
+}
+
+const dataBubbleStyles = StyleSheet.create({
+  bubble: {
+    position: 'absolute',
+    bottom: 160,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(0, 8, 16, 0.82)',
+    borderWidth: 1.5,
+    borderColor: '#00FFFF',
+    borderRadius: 8,
+    padding: 14,
+    zIndex: 90,
+  },
+  header: {
+    color: '#00FFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  body: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+});
+
+// ---------------------------------------------------------------------------
 // HolographicCursorOverlay
 // ---------------------------------------------------------------------------
 
@@ -566,6 +641,9 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
   // Holographic Cursor state — updated by gesture control packets from /ws/audio-out
   const [gesturePacket, setGesturePacket] = useState<GestureControlPacket | null>(null);
 
+  // Sovereign Vault DataBubble — text shown when a gesture result contains vault content
+  const [sovereignVaultText, setSovereignVaultText] = useState<string | null>(null);
+
   // Stable callback for sending mic audio chunks to the backend
   const sendAudioChunk = useCallback(
     (pcm: ArrayBuffer) => enkiService.sendAudioChunk(pcm),
@@ -579,6 +657,11 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
     if (packet.type === 'PRIVACY_MODE_ACTIVE') {
       setStatusMsg('🔒 Privacy Mode Active — frame forwarding suspended');
       return;
+    }
+
+    // Sovereign Vault text — display in DataBubble
+    if (packet.sovereign_vault_text) {
+      setSovereignVaultText(packet.sovereign_vault_text);
     }
 
     if (packet.event === 'STRETCH_DETECTED') {
@@ -791,6 +874,9 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
           💡 Tap the Ray-Ban frame to pause / resume (double-tap shortcut)
         </Text>
       )}
+
+      {/* Sovereign Vault DataBubble — terminal-style feed from the vault */}
+      <DataBubble text={sovereignVaultText} />
 
       {/* Holographic Cursor — renders hand-landmark position over the HUD */}
       <HolographicCursorOverlay packet={gesturePacket} />

@@ -21,6 +21,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
+  Dimensions,
   FlatList,
   Platform,
   ScrollView,
@@ -30,7 +32,7 @@ import {
   View,
 } from 'react-native';
 import { audioService } from '../services/AudioService';
-import { enkiService, TranscriptionMessage } from '../services/EnkiService';
+import { enkiService, GestureControlPacket, TranscriptionMessage } from '../services/EnkiService';
 
 // ---------------------------------------------------------------------------
 // Governance Laws — 10 laws with associated keyword patterns.
@@ -203,6 +205,166 @@ function SovereignPulseTicker({ latestTranscript }: SovereignPulseTickerProps) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// HolographicCursorOverlay
+// ---------------------------------------------------------------------------
+
+/**
+ * A full-screen transparent overlay that renders the Architect's Holographic
+ * Cursor based on hand-landmark data received from the backend over the
+ * /ws/audio-out control channel.
+ *
+ * - A small cyan crosshair tracks the normalised X/Y wrist coordinate.
+ * - On a PINCH_DETECTED event an expanding ring ripple effect is triggered at
+ *   those same coordinates, providing tactile-style feedback for HUD interactions.
+ *
+ * The component is deliberately lightweight: it relies only on React Native's
+ * built-in Animated API (no extra dependencies) so it never introduces lag on
+ * the Meadows.
+ */
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const CURSOR_SIZE = 20;
+const RIPPLE_SIZE = 60;
+
+interface HolographicCursorOverlayProps {
+  packet: GestureControlPacket | null;
+}
+
+function HolographicCursorOverlay({ packet }: HolographicCursorOverlayProps) {
+  // Cursor position (mapped from normalised 0–1 to screen pixels)
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+
+  // Ripple animation values
+  const rippleScale = useRef(new Animated.Value(0)).current;
+  const rippleOpacity = useRef(new Animated.Value(0)).current;
+  const cursorOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!packet || packet.gesture === 'NONE') return;
+
+    const screenX = packet.x * SCREEN_WIDTH;
+    const screenY = packet.y * SCREEN_HEIGHT;
+    setCursorPos({ x: screenX, y: screenY });
+
+    // Fade cursor in
+    Animated.timing(cursorOpacity, {
+      toValue: 1,
+      duration: 120,
+      useNativeDriver: true,
+    }).start();
+
+    if (packet.event === 'PINCH_DETECTED') {
+      // Reset ripple before re-triggering
+      rippleScale.setValue(0);
+      rippleOpacity.setValue(0.9);
+
+      Animated.parallel([
+        Animated.timing(rippleScale, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rippleOpacity, {
+          toValue: 0,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [packet, cursorOpacity, rippleScale, rippleOpacity]);
+
+  if (!packet || packet.gesture === 'NONE') return null;
+
+  const cursorLeft = cursorPos.x - CURSOR_SIZE / 2;
+  const cursorTop = cursorPos.y - CURSOR_SIZE / 2;
+  const rippleLeft = cursorPos.x - RIPPLE_SIZE / 2;
+  const rippleTop = cursorPos.y - RIPPLE_SIZE / 2;
+
+  const rippleTransform = [
+    {
+      scale: rippleScale.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.2, 1.8],
+      }),
+    },
+  ];
+
+  return (
+    <View style={cursorStyles.container} pointerEvents="none">
+      {/* Ripple ring */}
+      <Animated.View
+        style={[
+          cursorStyles.ripple,
+          {
+            left: rippleLeft,
+            top: rippleTop,
+            opacity: rippleOpacity,
+            transform: rippleTransform,
+          },
+        ]}
+      />
+      {/* Holographic cursor crosshair */}
+      <Animated.View
+        style={[
+          cursorStyles.cursor,
+          { left: cursorLeft, top: cursorTop, opacity: cursorOpacity },
+        ]}
+      >
+        <View style={cursorStyles.crossH} />
+        <View style={cursorStyles.crossV} />
+        <View style={cursorStyles.dot} />
+      </Animated.View>
+    </View>
+  );
+}
+
+const cursorStyles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+  },
+  ripple: {
+    position: 'absolute',
+    width: RIPPLE_SIZE,
+    height: RIPPLE_SIZE,
+    borderRadius: RIPPLE_SIZE / 2,
+    borderWidth: 2,
+    borderColor: '#00ffff',
+    backgroundColor: 'transparent',
+  },
+  cursor: {
+    position: 'absolute',
+    width: CURSOR_SIZE,
+    height: CURSOR_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  crossH: {
+    position: 'absolute',
+    width: CURSOR_SIZE,
+    height: 1,
+    backgroundColor: '#00ffff',
+    opacity: 0.85,
+  },
+  crossV: {
+    position: 'absolute',
+    width: 1,
+    height: CURSOR_SIZE,
+    backgroundColor: '#00ffff',
+    opacity: 0.85,
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#00ffff',
+  },
+});
+
+// ---------------------------------------------------------------------------
+
 interface Props {
   serverUrl: string;
   onDisconnect: () => void;
@@ -217,6 +379,9 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
   const [transcripts, setTranscripts] = useState<TranscriptionMessage[]>([]);
   const [latestTranscript, setLatestTranscript] = useState<TranscriptionMessage | null>(null);
   const flatListRef = useRef<FlatList<TranscriptionMessage>>(null);
+
+  // Holographic Cursor state — updated by gesture control packets from /ws/audio-out
+  const [gesturePacket, setGesturePacket] = useState<GestureControlPacket | null>(null);
 
   // Stable callback for sending mic audio chunks to the backend
   const sendAudioChunk = useCallback(
@@ -279,9 +444,15 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
       enkiService.startAudio(true);
 
       // 4. Open the raw PCM WebSocket streams
-      await enkiService.openAudioOutStream((pcmBytes) => {
-        audioService.enqueuePlayback(pcmBytes);
-      });
+      await enkiService.openAudioOutStream(
+        (pcmBytes) => {
+          audioService.enqueuePlayback(pcmBytes);
+        },
+        (packet) => {
+          // Gesture control packet from /ws/audio-out — update holographic cursor
+          setGesturePacket(packet);
+        },
+      );
       await enkiService.openAudioInStream();
 
       // 5. Start continuous mic streaming
@@ -416,6 +587,9 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
           💡 Tap the Ray-Ban frame to pause / resume (double-tap shortcut)
         </Text>
       )}
+
+      {/* Holographic Cursor — renders hand-landmark position over the HUD */}
+      <HolographicCursorOverlay packet={gesturePacket} />
     </View>
   );
 }

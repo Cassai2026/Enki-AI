@@ -28,6 +28,7 @@ enki_ai/
     └── odin_scraper.py     # cassai.co.uk scraper + conversation parser
 
 archive/          # Old versioned scripts (kept for reference)
+docs/             # Planning, founding and reference documents
 tests/            # pytest suite
 data/             # SQLite database files (git-ignored)
 ```

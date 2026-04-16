@@ -24,6 +24,16 @@
  * ---------------------------------------
  *  - Mic upload  : 16-bit signed PCM, 16 000 Hz, 1 channel  (ada.py SEND_SAMPLE_RATE)
  *  - Playback in : 16-bit signed PCM, 24 000 Hz, 1 channel  (ada.py RECEIVE_SAMPLE_RATE)
+ *
+ * Jitter / latency monitoring
+ * ---------------------------
+ * Each recording chunk is timed.  If the rolling average over the last
+ * JITTER_WINDOW chunks exceeds CHUNK_DURATION_MS * JITTER_THRESHOLD_RATIO,
+ * the optional onSignalDistortion callback is fired with the notification
+ * message 'SIGNAL DISTORTION DETECTED: ADAPTING TO VECTOR FLOW'.
+ * The caller is responsible for surfacing the UI alert and forwarding the
+ * signal_distortion event to the backend over Socket.IO so Ada can reduce
+ * her speaking rate.
  */
 
 import { Audio, AVPlaybackStatus } from 'expo-av';
@@ -38,7 +48,14 @@ const CHANNELS = 1;
 // How long each recording chunk is in ms.  Shorter = lower latency but more overhead.
 const CHUNK_DURATION_MS = 300;
 
+// Jitter detection — fire distortion callback when rolling average exceeds
+// this multiple of the expected chunk duration.
+const JITTER_THRESHOLD_RATIO = 1.5;
+// Number of recent chunks to include in the rolling average.
+const JITTER_WINDOW = 5;
+
 type PcmSendCallback = (pcmBytes: ArrayBuffer) => void;
+type SignalDistortionCallback = (message: string) => void;
 
 export class AudioService {
   private recording: Audio.Recording | null = null;
@@ -47,6 +64,11 @@ export class AudioService {
   private playbackQueue: ArrayBuffer[] = [];
   private isPlaying = false;
   private sound: Audio.Sound | null = null;
+
+  // Jitter / latency monitoring state
+  private onSignalDistortion: SignalDistortionCallback | null = null;
+  private _chunkTimings: number[] = [];
+  private _distortionActive = false;
 
   // ---------------------------------------------------------------------------
   // Permissions & session setup
@@ -71,6 +93,14 @@ export class AudioService {
     });
   }
 
+  /**
+   * Register a callback that fires whenever chunk latency exceeds the jitter
+   * threshold.  Pass `null` to clear the callback.
+   */
+  setSignalDistortionCallback(cb: SignalDistortionCallback | null): void {
+    this.onSignalDistortion = cb;
+  }
+
   // ---------------------------------------------------------------------------
   // Recording
   // ---------------------------------------------------------------------------
@@ -78,6 +108,8 @@ export class AudioService {
   async startStreaming(onChunk: PcmSendCallback): Promise<void> {
     this.onPcmChunk = onChunk;
     this.isRecording = true;
+    this._chunkTimings = [];
+    this._distortionActive = false;
     await this._recordChunkLoop();
   }
 
@@ -101,6 +133,8 @@ export class AudioService {
   }
 
   private async _recordOneChunk(): Promise<void> {
+    const chunkStart = Date.now();
+
     // Configure for 16-bit PCM at SEND_SAMPLE_RATE
     this.recording = new Audio.Recording();
     await this.recording.prepareToRecordAsync({
@@ -135,6 +169,10 @@ export class AudioService {
     const uri = this.recording.getURI();
     this.recording = null;
 
+    // Measure total chunk round-trip time and check for jitter.
+    const chunkDuration = Date.now() - chunkStart;
+    this._trackChunkLatency(chunkDuration);
+
     if (!uri) return;
 
     // Read the WAV file, strip the 44-byte header, send raw PCM
@@ -149,6 +187,38 @@ export class AudioService {
 
     const pcm = wavBytes.slice(WAV_HEADER_SIZE);
     this.onPcmChunk?.(pcm);
+  }
+
+  /**
+   * Track the per-chunk latency and fire the distortion callback when the
+   * rolling average indicates elevated jitter (a 'Static' or 'Rinse' area).
+   */
+  private _trackChunkLatency(durationMs: number): void {
+    this._chunkTimings.push(durationMs);
+    if (this._chunkTimings.length > JITTER_WINDOW) {
+      this._chunkTimings.shift();
+    }
+
+    if (this._chunkTimings.length < JITTER_WINDOW) {
+      // Not enough samples yet.
+      return;
+    }
+
+    const avg =
+      this._chunkTimings.reduce((acc, t) => acc + t, 0) / this._chunkTimings.length;
+    const isDistorted = avg > CHUNK_DURATION_MS * JITTER_THRESHOLD_RATIO;
+
+    if (isDistorted && !this._distortionActive) {
+      this._distortionActive = true;
+      console.warn(
+        `[AudioService] Signal distortion detected — rolling avg latency: ${avg.toFixed(0)} ms ` +
+          `(threshold: ${(CHUNK_DURATION_MS * JITTER_THRESHOLD_RATIO).toFixed(0)} ms)`
+      );
+      this.onSignalDistortion?.('SIGNAL DISTORTION DETECTED: ADAPTING TO VECTOR FLOW');
+    } else if (!isDistorted && this._distortionActive) {
+      // Latency has recovered — reset so the callback can fire again if needed.
+      this._distortionActive = false;
+    }
   }
 
   // ---------------------------------------------------------------------------

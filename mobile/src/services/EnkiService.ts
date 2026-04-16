@@ -134,6 +134,17 @@ class EnkiService {
     this.socket?.emit('kernel_panic', { reason: 'ARCHITECT_INITIATED' });
   }
 
+  /**
+   * Report elevated audio-chunk latency / jitter to the backend.
+   * The backend will instruct Ada to slow her speaking rate by ~10 % to
+   * improve cognitive processing during high-stress audits.
+   *
+   * @param avgLatencyMs  Rolling-average chunk duration in milliseconds.
+   */
+  reportSignalDistortion(avgLatencyMs?: number): void {
+    this.socket?.emit('signal_distortion', { avg_latency_ms: avgLatencyMs ?? null });
+  }
+
   // ---------------------------------------------------------------------------
   // Raw PCM WebSocket streams
   // ---------------------------------------------------------------------------

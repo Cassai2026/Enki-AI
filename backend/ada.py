@@ -2,6 +2,7 @@ import asyncio
 import base64
 import io
 import os
+import re
 import sys
 import traceback
 from dotenv import load_dotenv
@@ -24,6 +25,10 @@ if sys.version_info < (3, 11, 0):
 
 from tools import tools_list
 
+# Make the enki_ai package importable when ada.py is executed from backend/
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from enki_ai.core.governance import engine as governance_engine
+
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 SEND_SAMPLE_RATE = 16000
@@ -32,6 +37,49 @@ CHUNK_SIZE = 1024
 
 MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 DEFAULT_MODE = "camera"
+
+# ---------------------------------------------------------------------------
+# Binary diagnostic language detection (Governance Law L01 – Dimensional Inference)
+# ---------------------------------------------------------------------------
+
+# Terms that reduce a person to a fixed binary category rather than describing
+# a position on a continuous dimensional spectrum.
+_BINARY_DIAGNOSTIC_TERMS: frozenset[str] = frozenset({
+    "compliant",
+    "non-compliant",
+    "noncompliant",
+    "eligible",
+    "ineligible",
+    "not eligible",
+    "diagnosed",
+    "undiagnosed",
+    "not diagnosed",
+    "meets criteria",
+    "does not meet criteria",
+    "qualifies",
+    "does not qualify",
+    "passes",
+    "fails",
+})
+
+# Pre-compiled pattern for performance — word-boundary aware, case-insensitive.
+_BINARY_DIAGNOSTIC_PATTERN = re.compile(
+    r"\b(" + "|".join(re.escape(t) for t in _BINARY_DIAGNOSTIC_TERMS) + r")\b",
+    re.IGNORECASE,
+)
+
+_DIMENSIONAL_WARNING = (
+    "DIMENSIONAL WARNING: The preceding statement used binary categorical language. "
+    "Remember — these are continuous variables, not fixed boxes. "
+    "Every person exists on a spectrum of Attention Regulation, Executive Function, "
+    "Sensory Load Sensitivity, Emotional Regulation, and Social Processing. "
+    "No single label captures the full picture."
+)
+
+
+def _scan_for_binary_language(text: str) -> list[str]:
+    """Return a list of binary diagnostic terms found in *text* (empty if none)."""
+    return _BINARY_DIAGNOSTIC_PATTERN.findall(text)
 
 load_dotenv()
 client = genai.Client(http_options={"api_version": "v1beta"}, api_key=os.getenv("GEMINI_API_KEY"))
@@ -741,6 +789,44 @@ class AudioLoop:
                                     
                                     # Only send if there's new text
                                     if delta:
+                                        # --- Governance L01: Binary Diagnostic Language scan ---
+                                        detected_terms = _scan_for_binary_language(delta)
+                                        if detected_terms:
+                                            governance_engine.log_decision(
+                                                action="binary_diagnostic_language_detected",
+                                                rationale=(
+                                                    f"Ada used binary diagnostic language in output: "
+                                                    f"{detected_terms}. "
+                                                    "L01 (Dimensional Inference) requires continuous "
+                                                    "variables, not fixed categories."
+                                                ),
+                                                human_reviewed=False,
+                                                context={"terms": detected_terms, "delta": delta},
+                                            )
+                                            print(
+                                                f"[ADA] [GOVERNANCE L01] Binary diagnostic terms "
+                                                f"detected: {detected_terms}. Injecting Dimensional Warning."
+                                            )
+                                            # Prepend a Dimensional Warning via the active session so
+                                            # Ada acknowledges the continuous-variable principle.
+                                            try:
+                                                await self.session.send(
+                                                    input=(
+                                                        f"System Notification — DIMENSIONAL WARNING: "
+                                                        f"Your last response used binary categorical language "
+                                                        f"({', '.join(detected_terms)}). Please immediately "
+                                                        f"remind the Architect that these are continuous "
+                                                        f"dimensional variables — not fixed boxes — and "
+                                                        f"restate your point using spectrum-based language."
+                                                    ),
+                                                    end_of_turn=True,
+                                                )
+                                            except Exception as _warn_exc:
+                                                print(
+                                                    f"[ADA] [GOVERNANCE L01] Failed to inject warning: "
+                                                    f"{_warn_exc}"
+                                                )
+
                                         # Send to frontend (Streaming)
                                         if self.on_transcription:
                                              self.on_transcription({"sender": "ADA", "text": delta})

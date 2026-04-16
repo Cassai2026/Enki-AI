@@ -93,7 +93,7 @@ const Visualizer = ({ audioData, isListening, intensity = 0, width = 600, height
                     className="text-cyan-100 font-bold tracking-widest drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]"
                     style={{ fontSize: Math.min(width, height) * 0.1 }}
                 >
-                    A.D.A
+                    ENKI AI
                 </motion.div>
             </div>
 

@@ -14,10 +14,11 @@ import threading
 import sys
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from dotenv import load_dotenv
 
-
+load_dotenv()
 
 # Ensure we can import ada
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -114,6 +115,47 @@ load_settings()
 authenticator = None
 kasa_agent = KasaAgent(known_devices=SETTINGS.get("kasa_devices"))
 # tool_permissions is now SETTINGS["tool_permissions"]
+
+# ---------------------------------------------------------------------------
+# Forensic Audit Logging
+# ---------------------------------------------------------------------------
+
+# Token required in the X-Sovereign-Token WebSocket header.  Set SOVEREIGN_TOKEN
+# in the .env file.  If the variable is absent (empty string) the check is
+# skipped so existing deployments without the setting still work.
+SOVEREIGN_TOKEN: str = os.getenv("SOVEREIGN_TOKEN", "")
+
+# Learner-State dimensional variables (populated externally as needed).
+LEARNER_STATE: dict = {}
+
+FORENSIC_AUDIT_DIR = Path("forensic_audits")
+FORENSIC_AUDIT_LOG = FORENSIC_AUDIT_DIR / "live_audit_log.jsonl"
+
+
+async def log_forensic_event(action: str, rationale: str, context: dict) -> None:
+    """Append a timestamped entry to the forensic JSONL audit log.
+
+    The log is opened in append mode so no existing data is ever overwritten.
+    Current Learner-State variables are included when available.
+    """
+    try:
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action": action,
+            "rationale": rationale,
+            "context": context,
+            "learner_state": LEARNER_STATE.copy(),
+        }
+        line = json.dumps(entry) + "\n"
+
+        def _write() -> None:
+            FORENSIC_AUDIT_DIR.mkdir(exist_ok=True)
+            with open(FORENSIC_AUDIT_LOG, "a", encoding="utf-8") as f:
+                f.write(line)
+
+        await asyncio.to_thread(_write)
+    except Exception as exc:
+        print(f"[FORENSIC] Failed to write audit log: {exc}")
 
 @app.on_event("startup")
 async def startup_event():
@@ -1032,10 +1074,29 @@ async def audio_in_websocket(websocket: WebSocket):
     """
     global network_audio_in_queue
     await websocket.accept()
+
+    # --- Sovereign-Token authentication ---
+    token = websocket.headers.get("x-sovereign-token", "")
+    if SOVEREIGN_TOKEN and token != SOVEREIGN_TOKEN:
+        client_host = websocket.client.host if websocket.client else "unknown"
+        asyncio.create_task(log_forensic_event(
+            "UNAUTHORIZED_EXTRACTION_ATTEMPT",
+            "X-Sovereign-Token mismatch on /ws/audio-in",
+            {"endpoint": "/ws/audio-in", "remote": client_host},
+        ))
+        print(f"[WS/audio-in] Unauthorized connection attempt from {client_host}. Closing.")
+        await websocket.close(code=1008)
+        return
+
     print("[WS/audio-in] Mobile audio-in client connected.")
     try:
         while True:
             data = await websocket.receive_bytes()
+            asyncio.create_task(log_forensic_event(
+                "audio_in_message",
+                "PCM chunk received on /ws/audio-in",
+                {"bytes": len(data)},
+            ))
             if network_audio_in_queue is not None:
                 try:
                     network_audio_in_queue.put_nowait(data)
@@ -1087,6 +1148,20 @@ async def video_in_websocket(websocket: WebSocket):
       - A base64-encoded JPEG string
     """
     await websocket.accept()
+
+    # --- Sovereign-Token authentication ---
+    token = websocket.headers.get("x-sovereign-token", "")
+    if SOVEREIGN_TOKEN and token != SOVEREIGN_TOKEN:
+        client_host = websocket.client.host if websocket.client else "unknown"
+        asyncio.create_task(log_forensic_event(
+            "UNAUTHORIZED_EXTRACTION_ATTEMPT",
+            "X-Sovereign-Token mismatch on /ws/video-in",
+            {"endpoint": "/ws/video-in", "remote": client_host},
+        ))
+        print(f"[WS/video-in] Unauthorized connection attempt from {client_host}. Closing.")
+        await websocket.close(code=1008)
+        return
+
     print("[WS/video-in] Mobile camera client connected.")
     try:
         while True:
@@ -1094,8 +1169,18 @@ async def video_in_websocket(websocket: WebSocket):
             if "bytes" in message and message["bytes"]:
                 import base64 as _b64
                 frame_b64 = _b64.b64encode(message["bytes"]).decode("utf-8")
+                asyncio.create_task(log_forensic_event(
+                    "video_in_message",
+                    "JPEG frame received on /ws/video-in",
+                    {"bytes": len(message["bytes"])},
+                ))
             elif "text" in message and message["text"]:
                 frame_b64 = message["text"]
+                asyncio.create_task(log_forensic_event(
+                    "video_in_message",
+                    "Base64 JPEG frame received on /ws/video-in",
+                    {"chars": len(message["text"])},
+                ))
             else:
                 continue
             if audio_loop:
@@ -1104,6 +1189,36 @@ async def video_in_websocket(websocket: WebSocket):
         print("[WS/video-in] Mobile camera client disconnected.")
     except Exception as e:
         print(f"[WS/video-in] Error: {e}")
+
+
+@sio.event
+async def signal_distortion(sid, data=None):
+    """
+    Emitted by the mobile app when chunk latency exceeds the jitter threshold.
+
+    Instructs Ada to speak 10 % slower during high-stress audits so the
+    Architect has more time for cognitive processing.
+    """
+    print(f"[SERVER] Signal distortion reported by mobile client {sid}.")
+    asyncio.create_task(log_forensic_event(
+        "signal_distortion_detected",
+        "Mobile client reported elevated latency / jitter on audio chunks",
+        data or {},
+    ))
+    if audio_loop and audio_loop.session:
+        try:
+            await audio_loop.session.send(
+                input=(
+                    "System Notification: High signal latency has been detected on the "
+                    "mobile audio stream. Please slow your speaking rate by approximately "
+                    "10 percent to improve cognitive processing for the Architect during "
+                    "this high-stress period."
+                ),
+                end_of_turn=True,
+            )
+        except Exception as exc:
+            print(f"[SERVER] Failed to send TTS-rate instruction to model: {exc}")
+
 
 if __name__ == "__main__":
     uvicorn.run(

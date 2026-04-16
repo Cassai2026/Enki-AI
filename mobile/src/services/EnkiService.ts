@@ -37,6 +37,10 @@ class EnkiService {
   // ---------------------------------------------------------------------------
 
   connect(serverUrl: string, callbacks: EnkiServiceCallbacks): void {
+    // Disconnect any existing connection before creating a new one
+    if (this.socket?.connected) {
+      this.socket.disconnect();
+    }
     this.serverUrl = serverUrl.replace(/\/$/, '');
     this.callbacks = callbacks;
     this._setStatus('connecting');

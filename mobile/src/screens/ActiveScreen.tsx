@@ -45,6 +45,12 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
   const [transcripts, setTranscripts] = useState<TranscriptionMessage[]>([]);
   const flatListRef = useRef<FlatList<TranscriptionMessage>>(null);
 
+  // Stable callback for sending mic audio chunks to the backend
+  const sendAudioChunk = useCallback(
+    (pcm: ArrayBuffer) => enkiService.sendAudioChunk(pcm),
+    []
+  );
+
   // ---------------------------------------------------------------------------
   // Mount: wire up EnkiService callbacks
   // ---------------------------------------------------------------------------
@@ -105,9 +111,7 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
       await enkiService.openAudioInStream();
 
       // 5. Start continuous mic streaming
-      audioService.startStreaming((pcm) => {
-        enkiService.sendAudioChunk(pcm);
-      });
+      audioService.startStreaming(sendAudioChunk);
 
       setSessionState('active');
       setStatusMsg('Listening via Ray-Bans…');
@@ -131,7 +135,7 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
   const handleToggleMute = useCallback(() => {
     if (muted) {
       enkiService.resumeAudio();
-      audioService.startStreaming((pcm) => enkiService.sendAudioChunk(pcm));
+      audioService.startStreaming(sendAudioChunk);
       setMuted(false);
       setStatusMsg('Listening…');
     } else {

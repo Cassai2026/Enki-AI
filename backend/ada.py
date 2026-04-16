@@ -1183,8 +1183,10 @@ class AudioLoop:
         except OSError as e:
             # In glasses / headless mode there may be no local audio output device.
             # Audio is still forwarded to remote clients via the on_audio_data callback.
+            import traceback
             print(f"[ADA] [WARN] Could not open local audio output stream: {e}. "
                   "Audio will be routed via callback only (e.g. to mobile client).")
+            traceback.print_exc()
             stream = None
 
         while True:

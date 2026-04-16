@@ -1040,7 +1040,9 @@ async def audio_in_websocket(websocket: WebSocket):
                 try:
                     network_audio_in_queue.put_nowait(data)
                 except asyncio.QueueFull:
-                    pass  # Drop oldest-style: simply skip to avoid back-pressure
+                    # Queue is full — drop this incoming chunk to prevent backpressure.
+                    # The oldest chunk remains in the queue and will be processed next.
+                    pass
     except WebSocketDisconnect:
         print("[WS/audio-in] Mobile audio-in client disconnected.")
     except Exception as e:

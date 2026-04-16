@@ -83,7 +83,9 @@ export class AudioService {
 
   stopStreaming(): void {
     this.isRecording = false;
-    this.recording?.stopAndUnloadAsync().catch(() => {});
+    this.recording?.stopAndUnloadAsync().catch((err) => {
+      console.warn('[AudioService] Error stopping recording:', err);
+    });
     this.recording = null;
   }
 
@@ -210,8 +212,12 @@ export class AudioService {
 
   stopPlayback(): void {
     this.playbackQueue = [];
-    this.sound?.stopAsync().catch(() => {});
-    this.sound?.unloadAsync().catch(() => {});
+    this.sound?.stopAsync().catch((err) => {
+      console.warn('[AudioService] Error stopping sound:', err);
+    });
+    this.sound?.unloadAsync().catch((err) => {
+      console.warn('[AudioService] Error unloading sound:', err);
+    });
     this.sound = null;
     this.isPlaying = false;
   }

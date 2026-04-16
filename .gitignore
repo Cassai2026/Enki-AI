@@ -46,3 +46,10 @@ desktop.ini
 # Secrets / environment
 .env
 *.env
+
+# Browser / session state files (may contain auth tokens)
+fb_state.json
+*_state.json
+
+# Personal data files
+paul_notion.csv

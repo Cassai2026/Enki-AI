@@ -126,6 +126,14 @@ class EnkiService {
     this.socket?.emit('user_input', { text });
   }
 
+  /**
+   * Kernel Panic — emits a `kernel_panic` event to the server, signalling
+   * the Architect's intent to immediately reset the current AI session.
+   */
+  kernelPanic(): void {
+    this.socket?.emit('kernel_panic', { reason: 'ARCHITECT_INITIATED' });
+  }
+
   // ---------------------------------------------------------------------------
   // Raw PCM WebSocket streams
   // ---------------------------------------------------------------------------

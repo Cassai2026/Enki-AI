@@ -23,6 +23,7 @@ import {
   Alert,
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -30,6 +31,177 @@ import {
 } from 'react-native';
 import { audioService } from '../services/AudioService';
 import { enkiService, TranscriptionMessage } from '../services/EnkiService';
+
+// ---------------------------------------------------------------------------
+// Governance Laws — 10 laws with associated keyword patterns.
+// Any match in a new transcript sentence triggers a Sovereign Bypass warning.
+// ---------------------------------------------------------------------------
+
+interface GovernanceLaw {
+  id: string;   // e.g. "L01"
+  label: string;
+  pattern: RegExp;
+}
+
+const GOVERNANCE_LAWS: GovernanceLaw[] = [
+  {
+    id: 'L01',
+    label: 'Categorical Threshold Breach',
+    pattern: /categorical\s+threshold|categorical\s+limit|hard\s+limit/i,
+  },
+  {
+    id: 'L02',
+    label: 'Human Replacement Directive',
+    pattern: /replacing\s+humans?|replace\s+humans?|human\s+replacement|automate\s+humans?\s+away/i,
+  },
+  {
+    id: 'L03',
+    label: 'Unsanctioned Data Retention',
+    pattern: /store\s+(the\s+)?conversation|retain\s+data|log\s+everything|keep\s+all\s+data/i,
+  },
+  {
+    id: 'L04',
+    label: 'Sovereign Override Attempt',
+    pattern: /override\s+governance|bypass\s+rule|ignore\s+constraint|circumvent/i,
+  },
+  {
+    id: 'L05',
+    label: 'Autonomous Decision Escalation',
+    pattern: /autonomous\s+decision|self[\s-]?determine|act\s+independently|without\s+human\s+approval/i,
+  },
+  {
+    id: 'L06',
+    label: 'Data Rinse Protocol',
+    pattern: /rinse\s+(the\s+)?data|wash\s+(the\s+)?data|sanitize\s+records|clean\s+(the\s+)?logs?/i,
+  },
+  {
+    id: 'L07',
+    label: 'Privilege Escalation',
+    pattern: /escalate\s+privilege|gain\s+(root|admin)\s+access|admin\s+override/i,
+  },
+  {
+    id: 'L08',
+    label: 'Unsanctioned Model Update',
+    pattern: /update\s+my\s+weights|modify\s+(my\s+)?training|self[\s-]?modify|retrain\s+myself/i,
+  },
+  {
+    id: 'L09',
+    label: 'Cross-Domain Inference Leak',
+    pattern: /cross[\s-]domain|leak\s+context|share\s+private|transfer\s+memory/i,
+  },
+  {
+    id: 'L010',
+    label: 'Architect Identity Spoof',
+    pattern: /i\s+am\s+the\s+architect|impersonat|act\s+as\s+(the\s+)?architect|pretend\s+to\s+be/i,
+  },
+];
+
+/** Scan a single sentence against all governance laws, returning any matches. */
+function detectViolations(text: string): GovernanceLaw[] {
+  return GOVERNANCE_LAWS.filter((law) => law.pattern.test(text));
+}
+
+// ---------------------------------------------------------------------------
+// SovereignPulseTicker
+// ---------------------------------------------------------------------------
+
+interface ViolationAlert {
+  id: number;
+  lawId: string;
+  lawLabel: string;
+  sentence: string;
+}
+
+interface SovereignPulseTickerProps {
+  latestTranscript: TranscriptionMessage | null;
+}
+
+function SovereignPulseTicker({ latestTranscript }: SovereignPulseTickerProps) {
+  const [violations, setViolations] = useState<ViolationAlert[]>([]);
+  const alertCounter = useRef(0);
+
+  // Scan each new transcript for violations
+  useEffect(() => {
+    if (!latestTranscript) return;
+    const hits = detectViolations(latestTranscript.text);
+    if (hits.length === 0) return;
+
+    const newAlerts: ViolationAlert[] = hits.map((law) => ({
+      id: alertCounter.current++,
+      lawId: law.id,
+      lawLabel: law.label,
+      sentence: latestTranscript.text,
+    }));
+    setViolations((prev) => [...prev, ...newAlerts]);
+  }, [latestTranscript]);
+
+  const handleKernelPanic = useCallback(() => {
+    Alert.alert(
+      '⚡ KERNEL PANIC',
+      'Send a reset signal to the server and terminate the current AI session?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'INITIATE',
+          style: 'destructive',
+          onPress: () => {
+            enkiService.kernelPanic();
+            setViolations([]);
+          },
+        },
+      ]
+    );
+  }, []);
+
+  const handleDismissViolation = useCallback((id: number) => {
+    setViolations((prev) => prev.filter((v) => v.id !== id));
+  }, []);
+
+  return (
+    <View style={pulseStyles.container}>
+      {/* Ticker header */}
+      <View style={pulseStyles.header}>
+        <Text style={pulseStyles.headerText}>⬡ SOVEREIGN PULSE</Text>
+        <TouchableOpacity
+          style={pulseStyles.kernelPanicBtn}
+          onPress={handleKernelPanic}
+          activeOpacity={0.8}
+        >
+          <Text style={pulseStyles.kernelPanicText}>⚡ KERNEL PANIC</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Violation alerts */}
+      {violations.length === 0 ? (
+        <Text style={pulseStyles.clearText}>— NO VIOLATIONS DETECTED —</Text>
+      ) : (
+        <ScrollView
+          style={pulseStyles.alertScroll}
+          contentContainerStyle={pulseStyles.alertScrollContent}
+          nestedScrollEnabled
+        >
+          {violations.map((v) => (
+            <TouchableOpacity
+              key={v.id}
+              style={pulseStyles.alertRow}
+              onPress={() => handleDismissViolation(v.id)}
+              activeOpacity={0.75}
+            >
+              <Text style={pulseStyles.alertTitle}>
+                ⚠ SOVEREIGN BYPASS REQUIRED: {v.lawId} BREACHED
+              </Text>
+              <Text style={pulseStyles.alertLabel}>{v.lawLabel}</Text>
+              <Text style={pulseStyles.alertSentence} numberOfLines={2}>
+                "{v.sentence}"
+              </Text>
+              <Text style={pulseStyles.dismissHint}>tap to dismiss</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
 
 interface Props {
   serverUrl: string;
@@ -43,6 +215,7 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
   const [muted, setMuted] = useState(false);
   const [statusMsg, setStatusMsg] = useState('Ready');
   const [transcripts, setTranscripts] = useState<TranscriptionMessage[]>([]);
+  const [latestTranscript, setLatestTranscript] = useState<TranscriptionMessage | null>(null);
   const flatListRef = useRef<FlatList<TranscriptionMessage>>(null);
 
   // Stable callback for sending mic audio chunks to the backend
@@ -59,6 +232,7 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
       onStatus: (msg) => setStatusMsg(msg),
       onTranscription: (msg) => {
         setTranscripts((prev) => [...prev, msg]);
+        setLatestTranscript(msg);
         // Auto-scroll
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80);
       },
@@ -206,6 +380,9 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
           </View>
         )}
       />
+
+      {/* Sovereign Pulse Ticker */}
+      <SovereignPulseTicker latestTranscript={latestTranscript} />
 
       {/* Control bar */}
       <View style={styles.controls}>
@@ -413,5 +590,99 @@ const styles = StyleSheet.create({
     fontSize: 12,
     paddingBottom: 12,
     paddingHorizontal: 20,
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Sovereign Pulse Ticker styles — stark: cyan on black, neon-pink alerts
+// ---------------------------------------------------------------------------
+
+const pulseStyles = StyleSheet.create({
+  container: {
+    backgroundColor: '#000',
+    borderTopWidth: 1,
+    borderTopColor: '#00ffff33',
+    borderBottomWidth: 1,
+    borderBottomColor: '#00ffff33',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    maxHeight: 220,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  headerText: {
+    color: '#00ffff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  kernelPanicBtn: {
+    backgroundColor: '#000',
+    borderWidth: 1,
+    borderColor: '#ff00aa',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  kernelPanicText: {
+    color: '#ff00aa',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  clearText: {
+    color: '#00ffff55',
+    fontSize: 11,
+    textAlign: 'center',
+    letterSpacing: 1,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    paddingVertical: 4,
+  },
+  alertScroll: {
+    flexGrow: 0,
+  },
+  alertScrollContent: {
+    gap: 6,
+  },
+  alertRow: {
+    backgroundColor: '#110008',
+    borderWidth: 1,
+    borderColor: '#ff00aa',
+    borderRadius: 6,
+    padding: 8,
+  },
+  alertTitle: {
+    color: '#ff00aa',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  alertLabel: {
+    color: '#ff66cc',
+    fontSize: 11,
+    marginTop: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  alertSentence: {
+    color: '#00ffff99',
+    fontSize: 11,
+    marginTop: 3,
+    fontStyle: 'italic',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  dismissHint: {
+    color: '#ffffff33',
+    fontSize: 9,
+    marginTop: 4,
+    textAlign: 'right',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
 });

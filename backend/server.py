@@ -1204,6 +1204,32 @@ async def video_in_websocket(websocket: WebSocket):
                 ))
             else:
                 continue
+
+            # --- Privacy Lock (L03 — No Silent Profiling) ---
+            # Import privacy_lock state from hand_movement lazily so the
+            # module is only loaded when the gesture pipeline is active.
+            try:
+                import hand_movement as _hm
+                _privacy_locked: bool = _hm.is_privacy_locked()
+            except Exception:
+                _privacy_locked = False
+
+            if _privacy_locked:
+                # Do NOT forward the frame to Gemini.
+                asyncio.create_task(log_forensic_event(
+                    "privacy_mode_block",
+                    "Frame forwarding to Gemini suppressed — PRIVACY_MODE_ACTIVE (L03)",
+                    {"privacy_lock": True},
+                ))
+                # Notify the mobile app that privacy mode is active.
+                if audio_out_ws_clients:
+                    asyncio.create_task(_broadcast_control_to_ws(
+                        {"type": "PRIVACY_MODE_ACTIVE", "gesture": "SHIELD_PALM"}
+                    ))
+                # Still run gesture detection (needed to detect FIST unlock).
+                asyncio.create_task(_handle_spatial_gesture(frame_b64))
+                continue
+
             if audio_loop:
                 asyncio.create_task(audio_loop.send_frame(frame_b64))
             # Spatial-gesture processing — runs in parallel with Gemini frame
@@ -1221,8 +1247,10 @@ async def _handle_spatial_gesture(frame_b64: str) -> None:
     broadcast a JSON control packet to all /ws/audio-out clients so the mobile
     HUD can render the Holographic Cursor at the mapped coordinates.
 
-    A PINCH_DETECTED event additionally triggers a LiliethKernel audit via
-    ada.process_spatial_gestures (which logs to the GovernanceEngine).
+    PINCH  → PINCH_DETECTED event + optional forensic_data from enki_knowledge.db
+    STRETCH → STRETCH_DETECTED event + detail_level="HIGH"
+    SHIELD_PALM → privacy_lock is set in hand_movement; PRIVACY_MODE_ACTIVE
+                  is broadcast from the /ws/video-in handler on subsequent frames.
     """
     try:
         packet = await ada.process_spatial_gestures(frame_b64)
@@ -1233,18 +1261,31 @@ async def _handle_spatial_gesture(frame_b64: str) -> None:
         if gesture == "NONE":
             return
 
-        control_packet = {
+        control_packet: dict = {
             "type": "GESTURE",
             "gesture": gesture,
             "x": packet["x"],
             "y": packet["y"],
         }
 
+        if packet.get("privacy_lock_active"):
+            control_packet["privacy_lock_active"] = True
+
         if gesture == "PINCH":
             control_packet["event"] = "PINCH_DETECTED"
+            if packet.get("forensic_data"):
+                control_packet["forensic_data"] = packet["forensic_data"]
             print(
                 f"[SERVER] [SPATIAL] PINCH_DETECTED at "
                 f"({packet['x']:.3f}, {packet['y']:.3f}) — broadcasting to HUD"
+            )
+
+        elif gesture == "STRETCH":
+            control_packet["event"] = "STRETCH_DETECTED"
+            control_packet["detail_level"] = packet.get("detail_level", "HIGH")
+            print(
+                f"[SERVER] [SPATIAL] STRETCH_DETECTED at "
+                f"({packet['x']:.3f}, {packet['y']:.3f}) — detail_level=HIGH"
             )
 
         if audio_out_ws_clients:

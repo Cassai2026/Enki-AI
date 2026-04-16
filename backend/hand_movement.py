@@ -19,6 +19,7 @@ from __future__ import annotations
 import math
 import os
 import sys
+import time
 from typing import Optional
 
 # Make the enki_ai package importable when running from backend/
@@ -38,6 +39,33 @@ GESTURE_NONE = "NONE"
 # Distance threshold (normalised landmark space) below which thumb–index
 # proximity counts as a pinch.
 _PINCH_THRESHOLD = 0.05
+
+# ---------------------------------------------------------------------------
+# Privacy Lock — L03 (No Silent Profiling) hardware-level enforcement
+# ---------------------------------------------------------------------------
+
+# Global flag: when True, server.py MUST stop forwarding frames to Gemini.
+privacy_lock: bool = False
+
+# Timestamp (seconds since epoch) when a FIST gesture was first detected while
+# the privacy lock is active.  None if no FIST is currently held.
+_fist_start_time: Optional[float] = None
+
+# Duration (seconds) of a sustained FIST gesture required to unlock.
+FIST_UNLOCK_DURATION: float = 2.0
+
+
+def is_privacy_locked() -> bool:
+    """Return the current privacy lock state."""
+    return privacy_lock
+
+
+def set_privacy_lock(state: bool) -> None:
+    """Explicitly set the privacy lock state (used in tests / overrides)."""
+    global privacy_lock, _fist_start_time
+    privacy_lock = state
+    if not state:
+        _fist_start_time = None
 
 
 # ---------------------------------------------------------------------------
@@ -97,16 +125,27 @@ class GestureController:
                 "x":          float,  # normalised wrist X  (0–1, left→right)
                 "y":          float,  # normalised wrist Y  (0–1, top→bottom)
                 "confidence": float,  # placeholder, always 1.0 when detected
+                "privacy_lock_active": bool,  # current privacy lock state
             }
 
         Returns ``None`` if no hand was detected or if the frame is unusable
         (too dark, motion blur, etc.) — the exception is caught internally so
         the caller's event loop is never interrupted.
+
+        Privacy Lock (L03 — No Silent Profiling)
+        ----------------------------------------
+        * SHIELD_PALM activates ``privacy_lock`` immediately.
+        * FIST held for ``FIST_UNLOCK_DURATION`` seconds while the lock is
+          active deactivates it.
         """
+        global privacy_lock, _fist_start_time
+
         try:
             results = self._hands.process(frame_rgb)
 
             if not results.multi_hand_landmarks:
+                # Reset the FIST timer if the hand leaves the frame.
+                _fist_start_time = None
                 return None
 
             # Process only the first (dominant) hand
@@ -119,11 +158,51 @@ class GestureController:
             x = float(lm[0].x)
             y = float(lm[0].y)
 
+            # ------------------------------------------------------------------
+            # Privacy Lock logic
+            # ------------------------------------------------------------------
+            if gesture == GESTURE_SHIELD_PALM and not privacy_lock:
+                privacy_lock = True
+                _fist_start_time = None
+                governance_engine.log_decision(
+                    action="privacy_lock_activated",
+                    rationale=(
+                        "SHIELD_PALM detected — privacy_lock engaged. "
+                        "Gemini frame forwarding suspended (L03)."
+                    ),
+                    human_reviewed=True,
+                    context={"gesture": gesture, "x": x, "y": y},
+                )
+                print("[GestureController] PRIVACY LOCK ACTIVATED (SHIELD_PALM)")
+
+            elif gesture == GESTURE_FIST and privacy_lock:
+                now = time.monotonic()
+                if _fist_start_time is None:
+                    _fist_start_time = now
+                elif now - _fist_start_time >= FIST_UNLOCK_DURATION:
+                    privacy_lock = False
+                    _fist_start_time = None
+                    governance_engine.log_decision(
+                        action="privacy_lock_deactivated",
+                        rationale=(
+                            f"FIST held for {FIST_UNLOCK_DURATION}s — "
+                            "privacy_lock released (L03)."
+                        ),
+                        human_reviewed=True,
+                        context={"gesture": gesture, "x": x, "y": y},
+                    )
+                    print("[GestureController] PRIVACY LOCK DEACTIVATED (FIST 2s)")
+            else:
+                # Any gesture other than FIST resets the FIST hold timer.
+                if gesture != GESTURE_FIST:
+                    _fist_start_time = None
+
             packet: dict = {
                 "gesture": gesture,
                 "x": round(x, 4),
                 "y": round(y, 4),
                 "confidence": 1.0,
+                "privacy_lock_active": privacy_lock,
             }
 
             if gesture != GESTURE_NONE:
@@ -134,7 +213,12 @@ class GestureController:
                         f"normalised coordinates ({x:.3f}, {y:.3f})."
                     ),
                     human_reviewed=False,
-                    context={"gesture": gesture, "x": x, "y": y},
+                    context={
+                        "gesture": gesture,
+                        "x": x,
+                        "y": y,
+                        "privacy_lock_active": privacy_lock,
+                    },
                 )
 
             return packet

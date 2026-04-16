@@ -32,7 +32,12 @@ import {
   View,
 } from 'react-native';
 import { audioService } from '../services/AudioService';
-import { enkiService, GestureControlPacket, TranscriptionMessage } from '../services/EnkiService';
+import {
+  enkiService,
+  ForensicDataEntry,
+  GestureControlPacket,
+  TranscriptionMessage,
+} from '../services/EnkiService';
 
 // ---------------------------------------------------------------------------
 // Governance Laws — 10 laws with associated keyword patterns.
@@ -215,18 +220,19 @@ function SovereignPulseTicker({ latestTranscript }: SovereignPulseTickerProps) {
  * /ws/audio-out control channel.
  *
  * - A small cyan crosshair tracks the normalised X/Y wrist coordinate.
- * - On a PINCH_DETECTED event an expanding ring ripple effect is triggered at
- *   those same coordinates, providing tactile-style feedback for HUD interactions.
+ * - PINCH_DETECTED  → expanding ring ripple + cyan forensic data-bubble.
+ * - STRETCH_DETECTED → Dimensional Expansion animation (cyan lines expanding).
+ * - PRIVACY_MODE_ACTIVE → privacy banner shown at top of overlay.
  *
- * The component is deliberately lightweight: it relies only on React Native's
- * built-in Animated API (no extra dependencies) so it never introduces lag on
- * the Meadows.
+ * The component relies only on React Native's built-in Animated API so it
+ * never introduces lag on the Meadows.
  */
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const CURSOR_SIZE = 20;
 const RIPPLE_SIZE = 60;
+const EXPAND_SIZE = 120;
 
 interface HolographicCursorOverlayProps {
   packet: GestureControlPacket | null;
@@ -236,13 +242,34 @@ function HolographicCursorOverlay({ packet }: HolographicCursorOverlayProps) {
   // Cursor position (mapped from normalised 0–1 to screen pixels)
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
 
-  // Ripple animation values
+  // Forensic data-bubble (shown on PINCH when the DB returns a match)
+  const [forensicEntry, setForensicEntry] = useState<ForensicDataEntry | null>(null);
+  const bubbleOpacity = useRef(new Animated.Value(0)).current;
+
+  // Privacy mode flag
+  const [privacyMode, setPrivacyMode] = useState(false);
+
+  // Ripple animation values (PINCH)
   const rippleScale = useRef(new Animated.Value(0)).current;
   const rippleOpacity = useRef(new Animated.Value(0)).current;
+
+  // Dimensional Expansion animation values (STRETCH)
+  const expandScale = useRef(new Animated.Value(0)).current;
+  const expandOpacity = useRef(new Animated.Value(0)).current;
+
   const cursorOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!packet || packet.gesture === 'NONE') return;
+    if (!packet) return;
+
+    // Privacy mode banner
+    if (packet.type === 'PRIVACY_MODE_ACTIVE' || packet.privacy_lock_active) {
+      setPrivacyMode(true);
+      return;
+    }
+    setPrivacyMode(false);
+
+    if (packet.gesture === 'NONE') return;
 
     const screenX = packet.x * SCREEN_WIDTH;
     const screenY = packet.y * SCREEN_HEIGHT;
@@ -256,10 +283,9 @@ function HolographicCursorOverlay({ packet }: HolographicCursorOverlayProps) {
     }).start();
 
     if (packet.event === 'PINCH_DETECTED') {
-      // Reset ripple before re-triggering
+      // Reset and trigger ripple ring
       rippleScale.setValue(0);
       rippleOpacity.setValue(0.9);
-
       Animated.parallel([
         Animated.timing(rippleScale, {
           toValue: 1,
@@ -272,15 +298,55 @@ function HolographicCursorOverlay({ packet }: HolographicCursorOverlayProps) {
           useNativeDriver: true,
         }),
       ]).start();
-    }
-  }, [packet, cursorOpacity, rippleScale, rippleOpacity]);
 
-  if (!packet || packet.gesture === 'NONE') return null;
+      // Show forensic data-bubble if available
+      if (packet.forensic_data) {
+        setForensicEntry(packet.forensic_data);
+        bubbleOpacity.setValue(0);
+        Animated.sequence([
+          Animated.timing(bubbleOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.delay(4000),
+          Animated.timing(bubbleOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+        ]).start(() => setForensicEntry(null));
+      }
+    } else if (packet.event === 'STRETCH_DETECTED') {
+      // Dimensional Expansion — cyan lines expanding outward
+      expandScale.setValue(0);
+      expandOpacity.setValue(0.85);
+      Animated.parallel([
+        Animated.timing(expandScale, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(expandOpacity, {
+          toValue: 0,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [packet, cursorOpacity, rippleScale, rippleOpacity, expandScale, expandOpacity, bubbleOpacity]);
+
+  if (!packet || (packet.gesture === 'NONE' && packet.type !== 'PRIVACY_MODE_ACTIVE')) {
+    if (privacyMode) {
+      return (
+        <View style={cursorStyles.container} pointerEvents="none">
+          <View style={cursorStyles.privacyBanner}>
+            <Text style={cursorStyles.privacyText}>🔒 PRIVACY MODE ACTIVE</Text>
+          </View>
+        </View>
+      );
+    }
+    return null;
+  }
 
   const cursorLeft = cursorPos.x - CURSOR_SIZE / 2;
   const cursorTop = cursorPos.y - CURSOR_SIZE / 2;
   const rippleLeft = cursorPos.x - RIPPLE_SIZE / 2;
   const rippleTop = cursorPos.y - RIPPLE_SIZE / 2;
+  const expandLeft = cursorPos.x - EXPAND_SIZE / 2;
+  const expandTop = cursorPos.y - EXPAND_SIZE / 2;
 
   const rippleTransform = [
     {
@@ -291,9 +357,42 @@ function HolographicCursorOverlay({ packet }: HolographicCursorOverlayProps) {
     },
   ];
 
+  const expandTransform = [
+    {
+      scale: expandScale.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.1, 2.4],
+      }),
+    },
+  ];
+
+  // Forensic bubble position — placed 30 px to the right of the cursor
+  const bubbleLeft = cursorPos.x + CURSOR_SIZE;
+  const bubbleTop = cursorPos.y - 20;
+
   return (
     <View style={cursorStyles.container} pointerEvents="none">
-      {/* Ripple ring */}
+      {/* Privacy mode banner */}
+      {privacyMode && (
+        <View style={cursorStyles.privacyBanner}>
+          <Text style={cursorStyles.privacyText}>🔒 PRIVACY MODE ACTIVE</Text>
+        </View>
+      )}
+
+      {/* Dimensional Expansion rings (STRETCH) */}
+      <Animated.View
+        style={[
+          cursorStyles.expandRing,
+          {
+            left: expandLeft,
+            top: expandTop,
+            opacity: expandOpacity,
+            transform: expandTransform,
+          },
+        ]}
+      />
+
+      {/* Ripple ring (PINCH) */}
       <Animated.View
         style={[
           cursorStyles.ripple,
@@ -305,6 +404,27 @@ function HolographicCursorOverlay({ packet }: HolographicCursorOverlayProps) {
           },
         ]}
       />
+
+      {/* Forensic data-bubble (PINCH + DB match) */}
+      {forensicEntry && (
+        <Animated.View
+          style={[
+            cursorStyles.dataBubble,
+            { left: bubbleLeft, top: bubbleTop, opacity: bubbleOpacity },
+          ]}
+        >
+          <Text style={cursorStyles.bubbleTitle}>⬡ FORENSIC DATA</Text>
+          <Text style={cursorStyles.bubbleSource}>{forensicEntry.source_file}</Text>
+          {forensicEntry.gps_hint ? (
+            <Text style={cursorStyles.bubbleGps}>📍 {forensicEntry.gps_hint}</Text>
+          ) : null}
+          <Text style={cursorStyles.bubbleSummary} numberOfLines={3}>
+            {forensicEntry.summary}
+          </Text>
+          <Text style={cursorStyles.bubblePillars}>Pillars: {forensicEntry.pillars}</Text>
+        </Animated.View>
+      )}
+
       {/* Holographic cursor crosshair */}
       <Animated.View
         style={[
@@ -325,6 +445,23 @@ const cursorStyles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
   },
+  privacyBanner: {
+    position: 'absolute',
+    top: 12,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    borderColor: '#00ffff',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+  },
+  privacyText: {
+    color: '#00ffff',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
   ripple: {
     position: 'absolute',
     width: RIPPLE_SIZE,
@@ -333,6 +470,52 @@ const cursorStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#00ffff',
     backgroundColor: 'transparent',
+  },
+  expandRing: {
+    position: 'absolute',
+    width: EXPAND_SIZE,
+    height: EXPAND_SIZE,
+    borderRadius: EXPAND_SIZE / 2,
+    borderWidth: 1.5,
+    borderColor: '#00ffff',
+    backgroundColor: 'transparent',
+  },
+  dataBubble: {
+    position: 'absolute',
+    width: 200,
+    backgroundColor: 'rgba(0,10,20,0.88)',
+    borderColor: '#00ffff',
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 8,
+  },
+  bubbleTitle: {
+    color: '#00ffff',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  bubbleSource: {
+    color: '#aaffff',
+    fontSize: 9,
+    marginBottom: 2,
+  },
+  bubbleGps: {
+    color: '#80ffff',
+    fontSize: 9,
+    marginBottom: 2,
+  },
+  bubbleSummary: {
+    color: '#ccffff',
+    fontSize: 9,
+    marginBottom: 2,
+    lineHeight: 13,
+  },
+  bubblePillars: {
+    color: '#00cccc',
+    fontSize: 8,
+    fontStyle: 'italic',
   },
   cursor: {
     position: 'absolute',
@@ -388,6 +571,27 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
     (pcm: ArrayBuffer) => enkiService.sendAudioChunk(pcm),
     []
   );
+
+  // Handle an incoming gesture / control packet from the backend.
+  const handleControlPacket = useCallback((packet: GestureControlPacket) => {
+    setGesturePacket(packet);
+
+    if (packet.type === 'PRIVACY_MODE_ACTIVE') {
+      setStatusMsg('🔒 Privacy Mode Active — frame forwarding suspended');
+      return;
+    }
+
+    if (packet.event === 'STRETCH_DETECTED') {
+      // Notify the user that the LiliethKernel has switched to high-resolution
+      // audit mode.  The backend will request a technical audit from Gemini.
+      setStatusMsg('⬡ Dimensional Expansion — High-Resolution Audit Mode');
+    } else if (packet.event === 'PINCH_DETECTED') {
+      if (packet.forensic_data) {
+        const f = packet.forensic_data;
+        setStatusMsg(`⬡ Forensic: ${f.source_file}${f.gps_hint ? ` 📍${f.gps_hint}` : ''}`);
+      }
+    }
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Mount: wire up EnkiService callbacks
@@ -449,8 +653,8 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
           audioService.enqueuePlayback(pcmBytes);
         },
         (packet) => {
-          // Gesture control packet from /ws/audio-out — update holographic cursor
-          setGesturePacket(packet);
+          // Gesture / control packet from /ws/audio-out — update holographic cursor
+          handleControlPacket(packet);
         },
       );
       await enkiService.openAudioInStream();

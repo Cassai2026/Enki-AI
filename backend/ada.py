@@ -54,15 +54,84 @@ def _get_gesture_controller():
 # detected pinch is considered to be targeting the HUD zone.
 _HUD_Y_THRESHOLD = 0.35
 
+# Path to the Enki knowledge SQLite database produced by ingest_mission_data.py.
+# Resolved relative to the repo root (one level above backend/).
+_ENKI_KNOWLEDGE_DB = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "enki_knowledge.db",
+)
+
+
+def _query_forensic_db(keyword: str) -> dict | None:
+    """
+    Search ``enki_knowledge.db`` for the nearest Forensic_Evidence entry
+    matching *keyword* (case-insensitive LIKE search on content and keywords).
+
+    Returns a summary dict::
+
+        {
+            "source_file": str,
+            "summary":     str,   # first 300 chars of content
+            "pillars":     str,
+            "gps_hint":    str | None,
+        }
+
+    or ``None`` if the DB is absent or no match is found.
+    """
+    import sqlite3 as _sqlite3
+
+    db_path = os.environ.get("ENKI_KNOWLEDGE_DB", _ENKI_KNOWLEDGE_DB)
+    if not os.path.exists(db_path):
+        return None
+    try:
+        conn = _sqlite3.connect(db_path)
+        conn.row_factory = _sqlite3.Row
+        like = f"%{keyword}%"
+        cur = conn.execute(
+            """
+            SELECT source_file, content, pillars, gps_hint
+            FROM   Forensic_Evidence
+            WHERE  LOWER(content)     LIKE LOWER(?)
+               OR  LOWER(source_file) LIKE LOWER(?)
+               OR  LOWER(keywords)    LIKE LOWER(?)
+            LIMIT 1
+            """,
+            (like, like, like),
+        )
+        row = cur.fetchone()
+        conn.close()
+        if row is None:
+            return None
+        return {
+            "source_file": row["source_file"],
+            "summary":     row["content"][:300],
+            "pillars":     row["pillars"],
+            "gps_hint":    row["gps_hint"],
+        }
+    except Exception as exc:
+        print(f"[ADA] _query_forensic_db error: {exc}")
+        return None
+
 
 async def process_spatial_gestures(frame_b64: str) -> dict | None:
     """
     Decode a base64-encoded JPEG frame from /ws/video-in, run hand-landmark
     detection, and return a gesture packet (or None if nothing was detected).
 
-    When a PINCH gesture is detected inside the HUD zone (y < ``_HUD_Y_THRESHOLD``),
-    a *LiliethKernel* audit event is logged to the GovernanceEngine so the full
-    decision trail is preserved.
+    PINCH behaviour
+    ---------------
+    When a PINCH gesture is detected:
+    * A *LiliethKernel* audit event is logged (L06 Transparency).
+    * ``enki_knowledge.db`` is queried for the nearest Forensic_Evidence entry.
+      If an entry is found its summary is included in the returned packet as
+      ``forensic_data`` so the mobile HUD can display a cyan data-bubble next
+      to the HolographicCursor.
+
+    STRETCH behaviour
+    -----------------
+    When a STRETCH gesture is detected a ``detail_level`` hint of ``"HIGH"``
+    is included in the packet, signalling the LiliethKernel to request a
+    high-resolution technical audit from Gemini.
 
     The function is intentionally kernel-safe: any exception during decoding or
     inference is caught and logged without propagating to the caller.
@@ -70,10 +139,13 @@ async def process_spatial_gestures(frame_b64: str) -> dict | None:
     Returns a dict::
 
         {
-            "type":    "GESTURE",
-            "gesture": str,   # "PINCH" | "STRETCH" | "SHIELD_PALM" | "FIST"
-            "x":       float, # normalised 0–1
-            "y":       float, # normalised 0–1
+            "type":           "GESTURE",
+            "gesture":        str,         # "PINCH" | "STRETCH" | "SHIELD_PALM" | "FIST"
+            "x":              float,        # normalised 0–1
+            "y":              float,        # normalised 0–1
+            "forensic_data":  dict | None,  # present on PINCH when DB entry found
+            "detail_level":   str | None,   # "HIGH" on STRETCH, else absent
+            "privacy_lock_active": bool,    # reflects current privacy lock state
         }
 
     or ``None``.
@@ -102,35 +174,58 @@ async def process_spatial_gestures(frame_b64: str) -> dict | None:
         gesture = packet["gesture"]
         x = packet["x"]
         y = packet["y"]
+        privacy_lock_active = packet.get("privacy_lock_active", False)
 
-        # LiliethKernel audit event: pinch inside HUD zone triggers a
-        # governance-level record for the Architect's spatial decision trail.
-        if gesture == "PINCH" and y < _HUD_Y_THRESHOLD:
-            governance_engine.log_decision(
-                action="lilileth_kernel_spatial_audit",
-                rationale=(
-                    f"Architect pinch detected in HUD zone at ({x:.3f}, {y:.3f}). "
-                    "Spatial interaction recorded per L06 Transparency."
-                ),
-                human_reviewed=True,
-                context={
-                    "event": "PINCH_HUD",
-                    "x": x,
-                    "y": y,
-                    "hud_threshold": _HUD_Y_THRESHOLD,
-                },
-            )
-            print(
-                f"[ADA] [SPATIAL] LiliethKernel audit fired — "
-                f"PINCH in HUD zone at ({x:.3f}, {y:.3f})"
-            )
-
-        return {
+        result: dict = {
             "type": "GESTURE",
             "gesture": gesture,
             "x": x,
             "y": y,
+            "privacy_lock_active": privacy_lock_active,
         }
+
+        if gesture == "PINCH":
+            # LiliethKernel audit event: pinch triggers a governance-level
+            # record for the Architect's spatial decision trail (L06).
+            if y < _HUD_Y_THRESHOLD:
+                governance_engine.log_decision(
+                    action="lilileth_kernel_spatial_audit",
+                    rationale=(
+                        f"Architect pinch detected in HUD zone at ({x:.3f}, {y:.3f}). "
+                        "Spatial interaction recorded per L06 Transparency."
+                    ),
+                    human_reviewed=True,
+                    context={
+                        "event": "PINCH_HUD",
+                        "x": x,
+                        "y": y,
+                        "hud_threshold": _HUD_Y_THRESHOLD,
+                    },
+                )
+                print(
+                    f"[ADA] [SPATIAL] LiliethKernel audit fired — "
+                    f"PINCH in HUD zone at ({x:.3f}, {y:.3f})"
+                )
+
+            # Query the knowledge DB for the nearest forensic entry.
+            forensic_data = await asyncio.to_thread(
+                _query_forensic_db, "forensic"
+            )
+            if forensic_data:
+                result["forensic_data"] = forensic_data
+                print(
+                    f"[ADA] [SPATIAL] PINCH forensic lookup — "
+                    f"matched '{forensic_data['source_file']}'"
+                )
+            else:
+                result["forensic_data"] = None
+
+        elif gesture == "STRETCH":
+            # Signal the LiliethKernel to switch to high-resolution audit mode.
+            result["detail_level"] = "HIGH"
+            print("[ADA] [SPATIAL] STRETCH detected — detail_level=HIGH")
+
+        return result
 
     except Exception as exc:
         print(f"[ADA] process_spatial_gestures error (kernel-safe): {exc}")

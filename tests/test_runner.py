@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Master Test Runner for ada_v2.
+Master Test Runner for Enki AI - Ultimate ADA Edition.
 
 Usage:
     python tests/test_runner.py              # Run all tests
@@ -61,7 +61,7 @@ def run_tests(modules: list = None, quick: bool = False, verbose: bool = True):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ada_v2 Test Runner")
+    parser = argparse.ArgumentParser(description="Enki AI Test Runner")
     parser.add_argument(
         "--module", "-m",
         type=str,

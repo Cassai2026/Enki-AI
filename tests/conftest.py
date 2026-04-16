@@ -1,5 +1,5 @@
 """
-Pytest configuration and shared fixtures for ada_v2 tests.
+Pytest configuration and shared fixtures for Enki AI - Ultimate ADA Edition tests.
 """
 import pytest
 import sys

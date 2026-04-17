@@ -20,7 +20,7 @@ from enki_ai.core import config
 
 log = logging.getLogger(__name__)
 
-_DEFAULT_CACHE_DIR = str(config.PROJECT_ROOT / "data" / "odin_cache")
+_ODIN_CACHE_DIR = str(config.PROJECT_ROOT / "data" / "odin_cache")
 
 
 class OdinScraper:
@@ -29,7 +29,7 @@ class OdinScraper:
     def __init__(
         self,
         base_url: str = "https://www.cassai.co.uk",
-        cache_dir: str = _DEFAULT_CACHE_DIR,
+        cache_dir: str = _ODIN_CACHE_DIR,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.cache_dir = cache_dir

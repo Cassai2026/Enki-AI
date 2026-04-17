@@ -11,7 +11,6 @@ try:
     HAS_AUTH = True
     IMPORT_ERROR = ""
 except ImportError as e:
-    np = None  # type: ignore[assignment]
     HAS_AUTH = False
     IMPORT_ERROR = str(e)
     FaceAuthenticator = None

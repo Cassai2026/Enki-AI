@@ -3,13 +3,15 @@ Tests for Face Authentication.
 """
 import pytest
 import os
-import numpy as np
 
-# Try to import the authenticator, skip all tests if dependencies missing
+# Try to import optional heavy dependencies, skip all tests if missing
 try:
+    import numpy as np
     from authenticator import FaceAuthenticator
     HAS_AUTH = True
+    IMPORT_ERROR = ""
 except ImportError as e:
+    np = None  # type: ignore[assignment]
     HAS_AUTH = False
     IMPORT_ERROR = str(e)
     FaceAuthenticator = None

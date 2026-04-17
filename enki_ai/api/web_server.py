@@ -7,6 +7,7 @@ Run:
 """
 
 import logging
+import os
 import re
 from typing import Any
 
@@ -277,12 +278,10 @@ def get_category_data(category: str):
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint."""
-    import os as _os
-
     return jsonify(
         {
             "status": "online",
-            "database": "connected" if _os.path.exists(db.db_path) else "not found",
+            "database": "connected" if os.path.exists(db.db_path) else "not found",
         }
     )
 

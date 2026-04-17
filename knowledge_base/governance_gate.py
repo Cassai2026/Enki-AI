@@ -1,4 +1,5 @@
 import sqlite3
+import datetime
 
 
 # The L-Laws that every action must pass through
@@ -39,7 +40,6 @@ def validate_action(action_type, requestor='SYSTEM'):
                  (id INTEGER PRIMARY KEY, action TEXT, requestor TEXT,
                   verdict TEXT, laws_checked TEXT, timestamp TEXT)''')
 
-    import datetime
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if not required_laws:
@@ -90,7 +90,7 @@ def get_governance_audit():
         for action, requestor, verdict, laws, ts in rows:
             icon = '✅' if verdict == 'PERMITTED' else '🚫'
             print(f"  {icon} [{ts}] {action} by {requestor} | Laws: {laws}")
-    except Exception:
+    except sqlite3.OperationalError:
         print("[INFO] No governance log yet.")
     conn.close()
 

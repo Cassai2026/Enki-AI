@@ -20,15 +20,15 @@ def dispatch_mission(mission_name, objective, zone, priority=3):
     # Ensure missions table has a status and priority column
     try:
         c.execute("ALTER TABLE quest_log ADD COLUMN status TEXT DEFAULT 'ACTIVE'")
-    except Exception:
+    except sqlite3.OperationalError:
         pass
     try:
         c.execute("ALTER TABLE quest_log ADD COLUMN priority INTEGER DEFAULT 3")
-    except Exception:
+    except sqlite3.OperationalError:
         pass
     try:
         c.execute("ALTER TABLE quest_log ADD COLUMN dispatched_at TEXT")
-    except Exception:
+    except sqlite3.OperationalError:
         pass
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -89,8 +89,7 @@ def get_mission_briefing():
             "SELECT id, quest_name, objective, zone, priority FROM quest_log "
             "WHERE status = 'ACTIVE' ORDER BY priority ASC"
         )
-    except Exception:
-        # Fallback if status column doesn't exist yet
+    except sqlite3.OperationalError:
         c.execute("SELECT id, quest_name, objective, zone FROM quest_log")
     rows = c.fetchall()
 

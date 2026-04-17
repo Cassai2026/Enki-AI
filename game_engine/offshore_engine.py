@@ -82,7 +82,7 @@ def get_offshore_grid():
     try:
         c.execute("SELECT rig_name, zone, depth_m, output_kw, status FROM offshore_rigs")
         rigs = c.fetchall()
-    except Exception:
+    except sqlite3.OperationalError:
         rigs = []
 
     print("\n--- 🌊 OFFSHORE ENERGY GRID ---")

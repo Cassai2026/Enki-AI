@@ -96,7 +96,7 @@ def print_sumerian_laws():
             print(f"\n  [{code}] {name}")
             print(f"   Principle : {principle}")
             print(f"   Modern Link: {link}")
-    except Exception:
+    except sqlite3.OperationalError:
         print("[INFO] sumerian_laws table not found — run ingest_sumerian_laws() first.")
 
     conn.close()
@@ -117,7 +117,7 @@ def lookup_law(code):
             print(f"  Modern Link: {row[3]}")
         else:
             print(f"[HUD] ❌ LAW NOT FOUND: {code}")
-    except Exception:
+    except sqlite3.OperationalError:
         print("[INFO] sumerian_laws table not found — run ingest_sumerian_laws() first.")
     conn.close()
 

@@ -29,7 +29,7 @@ def generate_google_brief(topic=None):
             c.execute("SELECT item_name, purpose FROM build_menu")
         for name, purpose in c.fetchall():
             lines.append(f"  • {name}: {purpose}")
-    except Exception as exc:
+    except sqlite3.OperationalError as exc:
         lines.append(f"  [WARN] Could not read build_menu: {exc}")
 
     # 2. Active missions
@@ -38,7 +38,7 @@ def generate_google_brief(topic=None):
         c.execute("SELECT quest_name, objective, zone FROM quest_log")
         for qname, obj, zone in c.fetchall():
             lines.append(f"  • [{zone}] {qname} — {obj}")
-    except Exception as exc:
+    except sqlite3.OperationalError as exc:
         lines.append(f"  [WARN] Could not read quest_log: {exc}")
 
     # 3. Governance summary
@@ -47,7 +47,7 @@ def generate_google_brief(topic=None):
         c.execute("SELECT name, law FROM gesture_library")
         for name, law in c.fetchall():
             lines.append(f"  • {name} → {law}")
-    except Exception:
+    except sqlite3.OperationalError:
         lines.append("  [INFO] No gesture_library data yet — run omega_ingest first.")
 
     lines.append("\n" + "=" * 60)

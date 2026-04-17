@@ -2,6 +2,9 @@ fastapi
 uvicorn
 python-socketio
 python-multipart
+# Flask REST API (enki_ai/api/web_server.py)
+flask
+flask-cors
 # Google GenAI SDK (v1beta)
 google-genai
 # Computer Vision & Audio

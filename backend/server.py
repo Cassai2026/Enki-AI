@@ -62,7 +62,7 @@ audio_loop = None
 loop_task = None
 authenticator = None
 kasa_agent = KasaAgent()
-SETTINGS_FILE = "settings.json"
+SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
 
 DEFAULT_SETTINGS = {
     "face_auth_enabled": False, # Default OFF as requested

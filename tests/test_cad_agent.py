@@ -5,7 +5,20 @@ import pytest
 import asyncio
 import os
 
-from cad_agent import CadAgent
+# Try to import the agent, skip all tests if dependencies missing
+try:
+    from cad_agent import CadAgent
+    HAS_CAD = True
+    IMPORT_ERROR = ""
+except ImportError as e:
+    HAS_CAD = False
+    IMPORT_ERROR = str(e)
+    CadAgent = None  # type: ignore[assignment,misc]
+
+pytestmark = pytest.mark.skipif(
+    not HAS_CAD,
+    reason=f"CAD dependencies not installed: {IMPORT_ERROR}",
+)
 
 
 class TestCadAgentInit:

@@ -10,6 +10,20 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).parent.parent / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
+# Try to import ada, skip all tests if heavy dependencies (cv2, google-genai, etc.) are missing
+try:
+    import ada as _ada  # noqa: F401 – import to trigger dependency check
+    HAS_ADA = True
+    ADA_IMPORT_ERROR = ""
+except (ImportError, Exception) as e:
+    HAS_ADA = False
+    ADA_IMPORT_ERROR = str(e)
+
+pytestmark = pytest.mark.skipif(
+    not HAS_ADA,
+    reason=f"ADA dependencies not installed: {ADA_IMPORT_ERROR}",
+)
+
 
 class TestToolDefinitions:
     """Test tool definition schemas."""

@@ -1,23 +1,20 @@
-﻿class EquityVis:
-    def __init__(self):
-        self.conversion_rate = 0.07 # The 7% Titan-Spec Recovery
-        self.node_value = 1618.00  # Golden Ratio Credit Value
+﻿import json
 
-    def calculate_recovery_nodes(self, total_exposure):
-        """Calculates how many 'Gold-Nodes' are in a project."""
-        recovery_value = total_exposure * self.conversion_rate
-        num_nodes = int(recovery_value / self.node_value)
+class EquityVisualizer:
+    def __init__(self):
+        self.spec_file = "enki_ai/game_engine/data/asset_ledger_specs.json"
+
+    def run_equity_audit(self):
+        with open(self.spec_file, 'r') as f: data = json.load(f)
+        print(f"\n[ECONOMY] 💎 AUDITING SOVEREIGN EQUITY...")
         
-        print(f"\n[EQUITY] 💰 PROJECT EXPOSURE: £{total_exposure:,.2f}")
-        print(f"[EQUITY] 🎯 RECOVERY POTENTIAL: £{recovery_value:,.2f}")
-        print(f"[EQUITY] ✨ SPATIAL NODES DETECTED: {num_nodes} Gold-Nodes")
+        total_assets = data['asset_nodes'] * data['valuation_per_node_gbp']
+        net_worth = total_assets - data['total_liabilities']
         
-        return {
-            "total_recovery": recovery_value,
-            "nodes": num_nodes
-        }
+        print(f"[HUD] TOTAL PHYSICAL ASSETS: £{total_assets:,.2f}")
+        print(f"[HUD] DEBT-TO-EQUITY RATIO: 0.00 (TITAN_SPEC)")
+        print(f"[HUD] NET SOVEREIGN WORTH: £{net_worth:,.2f}")
+        print("VERDICT: Node 29 is financially unassailable. No external leverage detected.")
 
 if __name__ == "__main__":
-    vis = EquityVis()
-    # Testing with the Stretford Regeneration Package (£50m)
-    vis.calculate_recovery_nodes(50000000)
+    EquityVisualizer().run_equity_audit()

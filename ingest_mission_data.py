@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """
-ingest_mission_data.py
-======================
+ingest_mission_data.py  (root-level entry point)
+=================================================
+.. deprecated::
+    Run this script via the package instead::
+
+        python -m enki_ai.core.ingest_mission_data [--docs <path>] [--db <path>]
+
+    This root-level script is kept for backwards compatibility only and may be
+    removed in a future release.
+
 Reads every file in the /docs folder (DOCX and PDF), extracts plain text,
 and stores structured entries in ``enki_knowledge.db`` (SQLite).
 
@@ -21,6 +29,15 @@ Defaults: docs → ./docs,  db → ./enki_knowledge.db
 """
 
 from __future__ import annotations
+
+import warnings
+warnings.warn(
+    "Running ingest_mission_data.py from the project root is deprecated. "
+    "Use 'python -m enki_ai.core.ingest_mission_data' instead. "
+    "This root-level entry point will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=1,
+)
 
 import argparse
 import os

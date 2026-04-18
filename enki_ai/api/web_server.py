@@ -287,6 +287,167 @@ def health():
     )
 
 
+# ---------------------------------------------------------------------------
+# Governance API  (14+1 Pillar / DHCAIGM)
+# ---------------------------------------------------------------------------
+
+from enki_ai.core.governance import (  # noqa: E402
+    LAWS,
+    engine as _gov_engine,
+    GovernanceViolation,
+)
+
+_MAX_ACTION_LEN = 120
+_MAX_CONTEXT_KEYS = 20
+
+
+@app.route("/api/governance/laws", methods=["GET"])
+def governance_laws():
+    """
+    Return all Enki AI governance laws.
+
+    Response::
+
+        {
+            "status": "success",
+            "count": 10,
+            "laws": [
+                {"id": "L01", "name": "...", "principle": "...", "plain_english": "..."},
+                ...
+            ]
+        }
+    """
+    return jsonify(
+        {
+            "status": "success",
+            "count": len(LAWS),
+            "laws": [
+                {
+                    "id": law.id,
+                    "name": law.name,
+                    "principle": law.principle,
+                    "plain_english": law.plain_english,
+                }
+                for law in LAWS
+            ],
+        }
+    )
+
+
+@app.route("/api/governance/check", methods=["POST"])
+def governance_check():
+    """
+    Check whether an action is permitted under the governance model.
+
+    Request body::
+
+        {
+            "action": "recommend_support",
+            "context": {
+                "human_reviewed": true,
+                "consent_given": false,
+                "replaces_human": false
+            }
+        }
+
+    Response (compliant)::
+
+        {"status": "permitted", "action": "...", "violations": []}
+
+    Response (violation)::
+
+        {
+            "status": "violation",
+            "action": "...",
+            "violations": [
+                {"id": "L02", "name": "Human Oversight", "plain_english": "..."}
+            ]
+        }
+    """
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"status": "error", "message": "Request body must be JSON."}), 400
+
+    action = body.get("action", "")
+    if not isinstance(action, str) or not action.strip():
+        return jsonify({"status": "error", "message": "'action' must be a non-empty string."}), 400
+    if len(action) > _MAX_ACTION_LEN:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": f"'action' must not exceed {_MAX_ACTION_LEN} characters.",
+                }
+            ),
+            400,
+        )
+
+    ctx = body.get("context", {})
+    if not isinstance(ctx, dict):
+        return jsonify({"status": "error", "message": "'context' must be a JSON object."}), 400
+    if len(ctx) > _MAX_CONTEXT_KEYS:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": f"'context' may not exceed {_MAX_CONTEXT_KEYS} keys.",
+                }
+            ),
+            400,
+        )
+
+    action = action.strip()
+    violations = _gov_engine.check_action(action, context=ctx)
+    _gov_engine.log_decision(
+        action,
+        rationale="API governance check",
+        human_reviewed=bool(ctx.get("human_reviewed", False)),
+        context=ctx,
+    )
+
+    if violations:
+        return jsonify(
+            {
+                "status": "violation",
+                "action": action,
+                "violations": [
+                    {
+                        "id": law.id,
+                        "name": law.name,
+                        "plain_english": law.plain_english,
+                    }
+                    for law in violations
+                ],
+            }
+        )
+
+    return jsonify({"status": "permitted", "action": action, "violations": []})
+
+
+@app.route("/api/governance/audit-log", methods=["GET"])
+def governance_audit_log():
+    """Return the in-memory governance decision audit log."""
+    limit = request.args.get("limit", default=50, type=int)
+    limit = max(1, min(limit, 500))
+    log_entries = _gov_engine.audit_log()[-limit:]
+    return jsonify(
+        {
+            "status": "success",
+            "count": len(log_entries),
+            "entries": [
+                {
+                    "action": e.action,
+                    "rationale": e.rationale,
+                    "human_reviewed": e.human_reviewed,
+                    "timestamp": e.timestamp,
+                    "context": e.context,
+                }
+                for e in log_entries
+            ],
+        }
+    )
+
+
 @app.route("/", methods=["GET"])
 def index():
     """API documentation."""
@@ -302,6 +463,9 @@ def index():
                 "GET  /api/data/<category>": "All entries in a category",
                 "GET  /api/data/<category>/<key>": "Latest value for a key",
                 "GET  /health": "Health check",
+                "GET  /api/governance/laws": "List all 10 governance laws",
+                "POST /api/governance/check": "Check action against governance model",
+                "GET  /api/governance/audit-log": "In-memory governance audit log",
             },
         }
     )

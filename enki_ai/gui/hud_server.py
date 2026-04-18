@@ -14,7 +14,9 @@ Or import and call ``run()`` to start programmatically (e.g. from genesis_launch
 import asyncio
 import json
 import logging
+import math
 import os
+import random
 import time
 from pathlib import Path
 from typing import Any
@@ -111,7 +113,47 @@ _human_state: dict[str, Any] = {
     "energy_level": 78,
     "pain_flag": False,
     "volatility": "STABLE",
+    "attention_index": 72,
+    "sensory_load": 30,
+    "exec_function": 65,
 }
+
+# Simulated biometric drift parameters
+_BIO_CLOCK: float = 0.0
+
+
+def _tick_biometrics() -> None:
+    """
+    Advance the simulated human-state metrics by one step.
+
+    Uses slow sinusoidal drift plus small random jitter so the HUD panels
+    show realistic-looking fluctuations without real sensor hardware.
+    Values are clamped to sensible ranges and volatility / pain_flag are
+    derived from the current cognitive load.
+    """
+    global _BIO_CLOCK
+    _BIO_CLOCK += 0.08  # advances ~0.08 rad per 2-second broadcast tick
+
+    def _wave(base: float, amp: float, phase: float = 0.0) -> int:
+        raw = base + amp * math.sin(_BIO_CLOCK + phase) + random.uniform(-2, 2)
+        return int(max(0, min(100, raw)))
+
+    _human_state["cognitive_load"] = _wave(48, 18, 0.0)
+    _human_state["energy_level"]   = _wave(70, 12, 1.6)
+    _human_state["attention_index"]  = _wave(68, 15, 3.1)
+    _human_state["sensory_load"]     = _wave(32, 14, 0.8)
+    _human_state["exec_function"]    = _wave(63, 10, 2.4)
+
+    cog = _human_state["cognitive_load"]
+    if cog > 80:
+        _human_state["volatility"] = "ELEVATED"
+        _human_state["pain_flag"]  = random.random() < 0.25
+    elif cog > 65:
+        _human_state["volatility"] = "FLUCTUATING"
+        _human_state["pain_flag"]  = False
+    else:
+        _human_state["volatility"] = "STABLE"
+        _human_state["pain_flag"]  = False
 
 
 def _get_status_payload() -> dict[str, Any]:
@@ -414,6 +456,39 @@ _HUD_HTML = r"""<!DOCTYPE html>
 
     <div class="flex-1 p-4 space-y-4 overflow-y-auto scrollbar-custom">
 
+      <!-- Attention Index -->
+      <div>
+        <div class="flex justify-between text-[11px] mb-1">
+          <span class="text-cyan-700">ATTENTION INDEX</span>
+          <span class="neon-cyan font-bold" id="attn-val">—</span>
+        </div>
+        <div class="h-1.5 bg-cyan-950 rounded-full overflow-hidden">
+          <div class="progress-bar h-full" id="attn-bar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Sensory Load -->
+      <div>
+        <div class="flex justify-between text-[11px] mb-1">
+          <span class="text-cyan-700">SENSORY LOAD</span>
+          <span class="neon-amber font-bold" id="sensory-val">—</span>
+        </div>
+        <div class="h-1.5 bg-cyan-950 rounded-full overflow-hidden">
+          <div class="progress-bar h-full" style="background:linear-gradient(to right,#ffaa00,#ff2244);width:0%" id="sensory-bar"></div>
+        </div>
+      </div>
+
+      <!-- Executive Function -->
+      <div>
+        <div class="flex justify-between text-[11px] mb-1">
+          <span class="text-cyan-700">EXEC FUNCTION</span>
+          <span class="neon-green font-bold" id="exec-val">—</span>
+        </div>
+        <div class="h-1.5 bg-cyan-950 rounded-full overflow-hidden">
+          <div class="progress-bar progress-energy h-full" id="exec-bar" style="width:0%"></div>
+        </div>
+      </div>
+
       <!-- Cognitive Load -->
       <div>
         <div class="flex justify-between text-[11px] mb-1">
@@ -566,10 +641,23 @@ function renderHumanState(s) {
   set('energy-val', s.energy_level + '%');
   setW('energy-bar', s.energy_level);
 
+  if (s.attention_index !== undefined) {
+    set('attn-val', s.attention_index + '%');
+    setW('attn-bar', s.attention_index);
+  }
+  if (s.sensory_load !== undefined) {
+    set('sensory-val', s.sensory_load + '%');
+    setW('sensory-bar', s.sensory_load);
+  }
+  if (s.exec_function !== undefined) {
+    set('exec-val', s.exec_function + '%');
+    setW('exec-bar', s.exec_function);
+  }
+
   const volEl = document.getElementById('volatility');
   if (volEl) {
     volEl.textContent  = s.volatility;
-    volEl.className    = `text-sm font-bold ${s.volatility === 'STABLE' ? 'neon-green' : 'neon-amber'}`;
+    volEl.className    = `text-sm font-bold ${s.volatility === 'STABLE' ? 'neon-green' : s.volatility === 'ELEVATED' ? 'neon-red' : 'neon-amber'}`;
   }
   const painEl = document.getElementById('pain-flag');
   if (painEl) {
@@ -697,6 +785,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     reply = _handle_command(cmd)
                     await ws.send_json({"message": reply, "level": "success"})
             except asyncio.TimeoutError:
+                _tick_biometrics()
                 await _manager.broadcast(_get_status_payload())
     except WebSocketDisconnect:
         _manager.disconnect(ws)

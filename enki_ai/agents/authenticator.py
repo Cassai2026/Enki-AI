@@ -8,29 +8,73 @@ import base64
 import numpy as np
 import urllib.request
 
+# Default registry directory — one level above the package root so that
+# biometric assets are not stored inside the Python package tree.
+_DEFAULT_REGISTRY_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "auth",
+    "registry",
+)
+
+# Supported image extensions for the registry scan.
+_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+
+
 class FaceAuthenticator:
     # MediaPipe Face Landmarker model URL
     MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
     MODEL_PATH = os.path.join(os.path.dirname(__file__), "face_landmarker.task")
-    
-    def __init__(self, reference_image_path="reference.jpg", on_status_change=None, on_frame=None):
+
+    def __init__(
+        self,
+        registry_dir=None,
+        reference_image_path=None,
+        on_status_change=None,
+        on_frame=None,
+    ):
         """
-        :param reference_image_path: Path to the user's reference photo.
+        Initialise the authenticator.
+
+        :param registry_dir: Directory containing authorised user photos
+            (``auth/registry/`` by default).  Every ``.jpg``/``.png`` file is
+            loaded as one authorised identity.
+        :param reference_image_path: Deprecated single-file path kept for
+            backwards compatibility.  If *registry_dir* is ``None`` and this
+            argument is provided, the file is treated as a one-entry registry.
         :param on_status_change: Async callback(is_authenticated: bool).
-        :param on_frame: Async callback(frame_data_b64: str) to send frames to frontend.
+        :param on_frame: Async callback(frame_data_b64: str) for live frames.
         """
-        self.reference_image_path = reference_image_path
+        # Resolve registry directory.
+        if registry_dir is not None:
+            self.registry_dir = registry_dir
+            self._legacy_reference_path = None
+        elif reference_image_path is not None:
+            # Backwards-compat: wrap a single file path.
+            self.registry_dir = None
+            self._legacy_reference_path = reference_image_path
+        else:
+            self.registry_dir = _DEFAULT_REGISTRY_DIR
+            self._legacy_reference_path = None
+
+        # Keep the old attribute so existing tests that read it don't break.
+        self.reference_image_path = reference_image_path or os.path.join(
+            os.path.dirname(__file__), "reference.jpg"
+        )
+
         self.on_status_change = on_status_change
         self.on_frame = on_frame
-        
+
         self.authenticated = False
         self.running = False
+        # Maps username → landmark vector for every enrolled user.
+        self._registry: dict = {}
+        # Legacy single-reference slot kept for backwards compat.
         self.reference_landmarks = None
         self.landmarker = None
 
         self._ensure_model()
         self._init_landmarker()
-        self._load_reference()
+        self._load_registry()
 
     def _ensure_model(self):
         """Download the MediaPipe Face Landmarker model if not present."""
@@ -107,29 +151,79 @@ class FaceAuthenticator:
             print(f"[AUTH] Face match! Similarity: {similarity:.4f}")
         return is_match
 
-    def _load_reference(self):
-        if not os.path.exists(self.reference_image_path):
-            print(f"[AUTH] [WARN] Reference file not found at {self.reference_image_path}. Authentication will fail.")
+    def _load_registry(self):
+        """
+        Populate ``self._registry`` from the registry directory (or the legacy
+        single-file path).  Each loaded entry maps a user name to a landmark
+        vector extracted by ``_extract_landmarks``.
+        """
+        candidates: list[tuple[str, str]] = []  # (username, filepath)
+
+        if self._legacy_reference_path is not None:
+            # Single-file backwards-compat path.
+            candidates.append(("default", self._legacy_reference_path))
+        elif self.registry_dir is not None:
+            if not os.path.isdir(self.registry_dir):
+                print(
+                    f"[AUTH] [WARN] Registry directory not found: {self.registry_dir}. "
+                    "Authentication will fail until users are enrolled."
+                )
+                return
+            for fname in sorted(os.listdir(self.registry_dir)):
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in _IMAGE_EXTENSIONS:
+                    username = os.path.splitext(fname)[0]
+                    candidates.append((username, os.path.join(self.registry_dir, fname)))
+
+        if not candidates:
+            print("[AUTH] [WARN] No face images found in registry. Authentication will fail.")
             return
 
-        try:
-            print("[AUTH] Loading reference image...")
-            img_bgr = cv2.imread(self.reference_image_path)
-            if img_bgr is None:
-                print(f"[AUTH] [ERR] Failed to read image file: {self.reference_image_path}")
-                return
-            
-            # Convert to RGB
-            image_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-            
-            self.reference_landmarks = self._extract_landmarks(image_rgb)
-            
-            if self.reference_landmarks is not None:
-                print("[AUTH] [OK] Reference face landmarks extracted successfully.")
-            else:
-                print("[AUTH] [ERR] No face found in reference image.")
-        except Exception as e:
-            print(f"[AUTH] [ERR] Error loading reference: {e}")
+        for username, path in candidates:
+            if not os.path.exists(path):
+                print(f"[AUTH] [WARN] Registry image not found: {path}")
+                continue
+            try:
+                img_bgr = cv2.imread(path)
+                if img_bgr is None:
+                    print(f"[AUTH] [ERR] Failed to read image: {path}")
+                    continue
+                image_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                landmarks = self._extract_landmarks(image_rgb)
+                if landmarks is not None:
+                    self._registry[username] = landmarks
+                    print(f"[AUTH] [OK] Enrolled user '{username}' from {os.path.basename(path)}")
+                else:
+                    print(f"[AUTH] [ERR] No face found in {path} — user '{username}' not enrolled.")
+            except Exception as exc:
+                print(f"[AUTH] [ERR] Error loading {path}: {exc}")
+
+        # Backwards-compat: expose the first loaded entry as reference_landmarks
+        if self._registry:
+            self.reference_landmarks = next(iter(self._registry.values()))
+            print(f"[AUTH] Registry loaded: {len(self._registry)} user(s) enrolled.")
+        else:
+            print("[AUTH] [WARN] Registry is empty after loading. Authentication will fail.")
+
+    # ------------------------------------------------------------------
+    # Legacy method kept for backwards compatibility with existing callers.
+    # ------------------------------------------------------------------
+    def _load_reference(self):
+        """Deprecated wrapper — delegates to _load_registry."""
+        self._load_registry()
+
+    def _pulse_matches_registry(self, current_landmarks) -> tuple[bool, str]:
+        """
+        Verify the Animus pulse (current face landmarks) against **all**
+        authorised users in the registry.
+
+        Returns ``(True, username)`` on the first match, or ``(False, "")``
+        if no match is found.
+        """
+        for username, ref_landmarks in self._registry.items():
+            if self._compare_landmarks(ref_landmarks, current_landmarks):
+                return True, username
+        return False, ""
 
     async def start_authentication_loop(self):
         if self.authenticated:
@@ -138,12 +232,12 @@ class FaceAuthenticator:
                 await self.on_status_change(True)
             return
 
-        if self.reference_landmarks is None:
-             print("[AUTH] [ERR] Cannot start auth loop: No reference landmarks.")
+        if not self._registry:
+             print("[AUTH] [ERR] Cannot start auth loop: No users enrolled in registry.")
              return
 
         self.running = True
-        print("[AUTH] Starting camera for authentication...")
+        print(f"[AUTH] Starting camera — verifying against {len(self._registry)} enrolled user(s).")
         
         # Capture the current (main) event loop
         loop = asyncio.get_running_loop()
@@ -200,9 +294,10 @@ class FaceAuthenticator:
             if process_this_frame:
                 current_landmarks = self._extract_landmarks(rgb_frame)
                 
-                if self._compare_landmarks(self.reference_landmarks, current_landmarks):
+                matched, username = self._pulse_matches_registry(current_landmarks)
+                if matched:
                     self.authenticated = True
-                    print("[AUTH] [OPEN] FACE RECOGNIZED! Access Granted.")
+                    print(f"[AUTH] [OPEN] FACE RECOGNIZED — user '{username}'. Access Granted.")
                     if self.on_status_change:
                         asyncio.run_coroutine_threadsafe(self.on_status_change(True), loop)
                     self.running = False

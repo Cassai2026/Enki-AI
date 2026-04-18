@@ -1,0 +1,41 @@
+name: Python Application
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test Suite (Python 3.11)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y portaudio19-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install all project deps except those requiring hardware/display
+          pip install flask flask-cors fastapi uvicorn python-socketio python-multipart \
+            google-genai pillow python-dotenv python-docx PyPDF2 \
+            aiohttp zeroconf python-kasa pytest pytest-asyncio pytest-cov \
+            || true
+          # pyaudio needs portaudio; try but allow skip if unavailable
+          pip install pyaudio || true
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --tb=short --cov=enki_ai --cov-report=term-missing

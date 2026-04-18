@@ -146,30 +146,78 @@ class TestLandmarkComparison:
 
 
 class TestReferenceImage:
-    """Test reference image handling."""
+    """Test reference image handling (legacy single-file path)."""
     
     def test_default_reference_path(self):
-        """Test default reference image path."""
+        """Test default reference image path attribute exists."""
         auth = FaceAuthenticator()
-        # Default is "reference.jpg" in backend directory
+        assert hasattr(auth, 'reference_image_path')
         print(f"Reference path: {auth.reference_image_path}")
     
     def test_load_reference(self):
-        """Test loading reference image."""
+        """Test loading reference image via legacy _load_reference wrapper."""
         auth = FaceAuthenticator()
-        
-        ref_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            "enki_ai",
-            "agents",
-            "reference.jpg"
+        # _load_reference delegates to _load_registry — should not raise.
+        auth._load_reference()
+        print("_load_reference executed without error")
+
+
+class TestRegistryAuth:
+    """Test directory-based registry authentication."""
+
+    def test_registry_attribute_exists(self):
+        """FaceAuthenticator exposes _registry dict."""
+        auth = FaceAuthenticator()
+        assert hasattr(auth, '_registry')
+        assert isinstance(auth._registry, dict)
+
+    def test_empty_registry_dir_gives_empty_registry(self, tmp_path):
+        """An empty registry directory produces an empty _registry."""
+        auth = FaceAuthenticator(registry_dir=str(tmp_path))
+        assert auth._registry == {}
+
+    def test_pulse_matches_registry_no_users(self):
+        """_pulse_matches_registry returns (False, '') when registry is empty."""
+        auth = FaceAuthenticator()
+        auth._registry = {}
+        dummy = np.ones(1404, dtype=np.float32)
+        matched, username = auth._pulse_matches_registry(dummy)
+        assert matched is False
+        assert username == ""
+
+    def test_pulse_matches_registry_exact_match(self):
+        """_pulse_matches_registry returns (True, username) on identical vectors."""
+        auth = FaceAuthenticator()
+        landmarks = np.random.rand(1404).astype(np.float32)
+        auth._registry = {"naz": landmarks.copy()}
+        matched, username = auth._pulse_matches_registry(landmarks)
+        assert matched is True
+        assert username == "naz"
+
+    def test_pulse_matches_registry_multi_user(self):
+        """Registry loop finds a match among multiple enrolled users."""
+        auth = FaceAuthenticator()
+        target = np.ones(1404, dtype=np.float32)
+        decoy = np.zeros(1404, dtype=np.float32)
+        auth._registry = {"decoy_user": decoy, "real_user": target.copy()}
+        matched, username = auth._pulse_matches_registry(target)
+        assert matched is True
+        assert username == "real_user"
+
+    def test_legacy_reference_path_still_accepted(self):
+        """Passing reference_image_path sets up backwards-compat attributes."""
+        auth = FaceAuthenticator(reference_image_path="nonexistent.jpg")
+        assert auth.reference_image_path == "nonexistent.jpg"
+        # registry_dir should be None when single-file path is provided
+        assert auth.registry_dir is None
+
+    def test_registry_dir_takes_precedence(self, tmp_path):
+        """registry_dir parameter takes precedence over reference_image_path."""
+        auth = FaceAuthenticator(
+            registry_dir=str(tmp_path),
+            reference_image_path="reference.jpg",
         )
-        
-        if os.path.exists(ref_path):
-            auth._load_reference()
-            print("Reference image loaded")
-        else:
-            print("No reference image found (expected in new setup)")
+        assert auth.registry_dir == str(tmp_path)
 
 
 class TestCameraAccess:

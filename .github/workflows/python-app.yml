@@ -28,13 +28,12 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          # Install all project deps except those requiring hardware/display
-          pip install flask flask-cors fastapi uvicorn python-socketio python-multipart \
-            google-genai pillow python-dotenv python-docx PyPDF2 \
-            aiohttp zeroconf python-kasa pytest pytest-asyncio pytest-cov \
-            || true
-          # pyaudio needs portaudio; try but allow skip if unavailable
-          pip install pyaudio || true
+          # Install project dependencies; pyaudio needs portaudio (installed above).
+          # Packages requiring a display (opencv, mediapipe, playwright) are optional
+          # in CI — they are guarded by try/except in the test suite.
+          pip install -r requirements.txt || true
+          # Ensure test tooling is always present even if requirements.txt install fails
+          pip install pytest pytest-asyncio pytest-cov
 
       - name: Run tests
         run: |

@@ -353,10 +353,10 @@ This is a server-side issue from the Gemini API. Simply reconnect by clicking th
 ### 🎬 Demo Videos
 
 > Demo recordings will be added to [`demo/`](demo/).
-> Place `.mp4` or `.webm` files there — they will appear here once uploaded.
+> The filenames below are planned placeholders — add the actual files to make them appear.
 
-| Demo | Description |
-|------|-------------|
+| Planned Demo File | Description |
+|-------------------|-------------|
 | `demo/voice_cad.mp4` | Voice-to-CAD: speak a shape, watch it render in 3D |
 | `demo/face_auth.mp4` | Face authentication via registry-based Animus pulse |
 | `demo/gesture_hud.mp4` | Minority Report gesture HUD and pinch-to-query |
@@ -365,9 +365,10 @@ This is a server-side issue from the Gemini API. Simply reconnect by clicking th
 ### 📷 Screenshots
 
 > Screenshots will be added to [`screenshots/`](screenshots/).
+> The filenames below are planned placeholders — add the actual files to make them appear.
 
-| Screenshot | Description |
-|------------|-------------|
+| Planned Screenshot File | Description |
+|-------------------------|-------------|
 | `screenshots/main_ui.png` | Main Electron window with 3D CAD viewer |
 | `screenshots/auth_screen.png` | Face authentication lock screen |
 | `screenshots/gesture_overlay.png` | MediaPipe hand-tracking overlay |

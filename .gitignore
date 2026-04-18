@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.pyc
 .Python
 
 # Virtual environments
@@ -49,6 +50,13 @@ desktop.ini
 # Secrets / environment
 .env
 *.env
+
+# Projects output folder (user data; not committed)
+projects/
+
+# Docs binary files (contain user documents; not committed)
+docs/*.docx
+docs/*.pdf
 
 # Browser / session state files (may contain auth tokens)
 fb_state.json

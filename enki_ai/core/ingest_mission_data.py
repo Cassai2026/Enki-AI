@@ -1,18 +1,24 @@
-# This file has been consolidated into enki_ai/core/ingest_mission_data.py.
-# Re-exported here for backwards compatibility.
-from enki_ai.core.ingest_mission_data import (  # noqa: F401
-    ingest,
-    search_forensic_entry,
-    extract_text,
-    init_db,
-    insert_entry,
-    THE_14_PILLARS,
-)
+#!/usr/bin/env python3
+"""
+ingest_mission_data.py
+======================
+Reads every file in the /docs folder (DOCX and PDF), extracts plain text,
+and stores structured entries in ``enki_knowledge.db`` (SQLite).
 
-if __name__ == "__main__":
-    import runpy
-    runpy.run_module("enki_ai.core.ingest_mission_data", run_name="__main__")
+Tables
+------
+Forensic_Evidence   — Field reports, site logs, GPS/location data
+System_Logic        — Technical stack docs, execution notes, backend logic
+Personal_Mandate    — Founding documents, mission logs, governance charters
 
+Each row is tagged with one or more of the 14 Pillars (comma-separated).
+
+Usage
+-----
+    python ingest_mission_data.py [--docs <path>] [--db <path>]
+
+Defaults: docs → ./docs,  db → ./enki_knowledge.db
+"""
 
 from __future__ import annotations
 
@@ -380,18 +386,22 @@ def ingest(docs_dir: Path, db_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    # Default paths are relative to the repository root (three levels up from
+    # enki_ai/core/ingest_mission_data.py).
+    _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
     parser = argparse.ArgumentParser(
         description="Ingest /docs mission data into enki_knowledge.db"
     )
     parser.add_argument(
         "--docs",
-        default=str(Path(__file__).resolve().parent / "docs"),
-        help="Path to the docs folder (default: ./docs)",
+        default=str(_REPO_ROOT / "docs"),
+        help="Path to the docs folder (default: <repo>/docs)",
     )
     parser.add_argument(
         "--db",
-        default=str(Path(__file__).resolve().parent / "enki_knowledge.db"),
-        help="Path to the output SQLite database (default: ./enki_knowledge.db)",
+        default=str(_REPO_ROOT / "enki_knowledge.db"),
+        help="Path to the output SQLite database (default: <repo>/enki_knowledge.db)",
     )
     args = parser.parse_args()
 

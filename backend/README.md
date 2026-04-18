@@ -1,17 +1,26 @@
-# backend/ — Moved to enki_ai/agents/
+# backend/ — API Entry Point
 
-All Python agent modules that were previously in this directory have been
-moved to [`enki_ai/agents/`](../enki_ai/agents/) as part of consolidating
-the project into a single `enki_ai` Python package.
+`backend/` is the **API entry point layer** for Enki AI.  All core enforcer
+logic, kernel ingestion, and agent business logic lives in the
+[`enki_ai/`](../enki_ai/) package, organised as follows:
 
-## Starting the server
+| Sub-package | Purpose |
+|---|---|
+| `enki_ai/core/` | Core enforcer, governance engine, kernel ingestion, config |
+| `enki_ai/agents/` | FastAPI server, ADA agent, tools, device agents |
+| `enki_ai/api/` | REST API helpers, database models |
+| `enki_ai/gui/` | Desktop GUI |
+| `enki_ai/scrapers/` | Data scrapers |
+
+**Do not add business logic here.**  This folder exists only to document the
+entry-point convention.  The live server is started with:
 
 ```bash
 # From the repo root
 python -m enki_ai.agents.server
 ```
 
-## Old path → New path
+## Canonical module locations (old path → new path)
 
 | Old | New |
 |-----|-----|
@@ -26,5 +35,6 @@ python -m enki_ai.agents.server
 | `backend/capture_face.py` | `enki_ai/agents/capture_face.py` |
 | `backend/hand_movement.py` | `enki_ai/agents/hand_movement.py` |
 | `backend/project_manager.py` | `enki_ai/agents/project_manager.py` |
-| `backend/settings.json` | `enki_ai/agents/settings.json` |
-| `backend/face_landmarker.task` | `enki_ai/agents/face_landmarker.task` |
+| `sdg_enforcer.py` (root) | `enki_ai/core/sdg_enforcer.py` |
+| `ingest_mission_data.py` (root) | `enki_ai/core/ingest_mission_data.py` |
+| `sovereign_ingest.py` (root) | `enki_ai/core/sovereign_ingest.py` |

@@ -1,0 +1,20 @@
+name: anu_sovereign_app
+description: Forensic Auditing Tool for the 29th Node.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  crypto: ^3.0.3  # For the forensic hashing logic
+  geolocator: ^10.1.0 # For the GPS-tagged evidence
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

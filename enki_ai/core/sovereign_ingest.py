@@ -1,4 +1,5 @@
-# backend/core/knowledge_base/sovereign_ingest.py
+# enki_ai/core/sovereign_ingest.py
+# Canonical location — previously at sovereign_ingest.py (repo root).
 import sqlite3
 import os
 from docx import Document

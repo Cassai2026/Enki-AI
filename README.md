@@ -182,7 +182,7 @@ To use the secure voice features, Enki AI needs to know what you look like.
 
 1. Take a clear photo of your face (or use an existing one).
 2. Rename the file to `reference.jpg`.
-3. Drag and drop this file into the `Enki-AI/backend` folder.
+3. Drag and drop this file into the `Enki-AI/enki_ai/agents` folder.
 4. (Optional) You can toggle this feature on/off in `settings.json` by changing `"face_auth_enabled": true/false`.
 
 ---
@@ -260,7 +260,7 @@ Use this if you want to see the Python logs (recommended for debugging).
 **Terminal 1 (Backend):**
 ```bash
 conda activate enki-ai
-python backend/server.py
+python -m enki_ai.agents.server
 ```
 
 **Terminal 2 (Frontend):**
@@ -322,7 +322,7 @@ npm run dev
 **Symptoms**: Backend crashes on startup with "API key not found".
 
 **Solution**:
-1. Make sure your `.env` file is in the root `Enki-AI` folder (not inside `backend/`).
+1. Make sure your `.env` file is in the root `Enki-AI` folder (not inside `enki_ai/agents/`).
 2. Verify the format is exactly: `GEMINI_API_KEY=your_key` (no quotes, no spaces).
 3. Restart the backend after editing the file.
 
@@ -346,17 +346,22 @@ This is a server-side issue from the Gemini API. Simply reconnect by clicking th
 
 ```
 Enki-AI/
-├── backend/                    # Python server & AI logic
-│   ├── ada.py                  # Gemini Live API integration
-│   ├── server.py               # FastAPI + Socket.IO server
-│   ├── cad_agent.py            # CAD generation orchestrator
-│   ├── printer_agent.py        # 3D printer discovery & slicing
-│   ├── web_agent.py            # Playwright browser automation
-│   ├── kasa_agent.py           # TP-Link smart home control
-│   ├── authenticator.py        # MediaPipe face auth logic
-│   ├── project_manager.py      # Project context management
-│   ├── tools.py                # Tool definitions for Gemini
-│   └── reference.jpg           # Your face photo (add this!)
+├── enki_ai/                    # Python package
+│   ├── agents/                 # Real-time AI agents & server
+│   │   ├── ada.py              # Gemini Live API integration
+│   │   ├── server.py           # FastAPI + Socket.IO server
+│   │   ├── cad_agent.py        # CAD generation orchestrator
+│   │   ├── printer_agent.py    # 3D printer discovery & slicing
+│   │   ├── web_agent.py        # Playwright browser automation
+│   │   ├── kasa_agent.py       # TP-Link smart home control
+│   │   ├── authenticator.py    # MediaPipe face auth logic
+│   │   ├── project_manager.py  # Project context management
+│   │   ├── tools.py            # Tool definitions for Gemini
+│   │   └── reference.jpg       # Your face photo (add this!)
+│   ├── api/                    # Flask REST API & database
+│   ├── core/                   # Config, governance, core logic
+│   ├── gui/                    # Desktop GUI
+│   └── scrapers/               # Web scrapers
 ├── src/                        # React frontend
 │   ├── App.jsx                 # Main application component
 │   ├── components/             # UI components (11 files)
@@ -396,7 +401,7 @@ Contributions are welcome! Here's how:
 
 ### Development Tips
 
-- Run the backend separately (`python backend/server.py`) to see Python logs.
+- Run the backend separately (`python -m enki_ai.agents.server`) to see Python logs.
 - Use `npm run dev` without Electron during frontend development (faster reload).
 - The `projects/` folder contains user data—don't commit it to Git.
 

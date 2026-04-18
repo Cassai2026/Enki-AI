@@ -20,12 +20,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Ensure we can import ada
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-import ada
-from authenticator import FaceAuthenticator
-from kasa_agent import KasaAgent
+from enki_ai.agents import ada
+from enki_ai.agents.authenticator import FaceAuthenticator
+from enki_ai.agents.kasa_agent import KasaAgent
 
 # Create a Socket.IO server
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')

@@ -18,12 +18,9 @@ from __future__ import annotations
 
 import math
 import os
-import sys
 import time
 from typing import Optional
 
-# Make the enki_ai package importable when running from backend/
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from enki_ai.core.governance import engine as governance_engine
 
 # ---------------------------------------------------------------------------

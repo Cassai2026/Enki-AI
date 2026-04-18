@@ -7,7 +7,7 @@ import os
 # Try to import optional heavy dependencies, skip all tests if missing
 try:
     import numpy as np
-    from authenticator import FaceAuthenticator
+    from enki_ai.agents.authenticator import FaceAuthenticator
     HAS_AUTH = True
     IMPORT_ERROR = ""
 except ImportError as e:
@@ -160,7 +160,8 @@ class TestReferenceImage:
         
         ref_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "backend",
+            "enki_ai",
+            "agents",
             "reference.jpg"
         )
         

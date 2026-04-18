@@ -7,7 +7,7 @@ import os
 
 # Try to import the agent, skip all tests if dependencies missing
 try:
-    from web_agent import WebAgent
+    from enki_ai.agents.web_agent import WebAgent
     HAS_WEB = True
     IMPORT_ERROR = ""
 except (ImportError, ValueError) as e:

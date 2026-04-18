@@ -7,7 +7,7 @@ import os
 
 # Try to import the agent, skip all tests if dependencies missing
 try:
-    from cad_agent import CadAgent
+    from enki_ai.agents.cad_agent import CadAgent
     HAS_CAD = True
     IMPORT_ERROR = ""
 except ImportError as e:
@@ -109,7 +109,8 @@ class TestCadIteration:
         # First check if temp_cad_gen.py exists
         temp_file = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "backend",
+            "enki_ai",
+            "agents",
             "temp_cad_gen.py"
         )
         

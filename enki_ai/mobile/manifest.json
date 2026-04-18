@@ -1,0 +1,11 @@
+﻿{
+    "app_name": "Anu Sovereign Auditor",
+    "version": "v0.1-Alpha-Omega",
+    "permissions": {
+        "gps": "ALWAYS_CONTEMPORANEOUS",
+        "camera": "FORENSIC_ONLY",
+        "data": "SOVEREIGN_ENCRYPTED"
+    },
+    "emergency_handshake": "BURTON_COPELAND_LEGAL_SHIELD",
+    "node_sync": "NODE_29_M32"
+}

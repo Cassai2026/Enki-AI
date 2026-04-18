@@ -1,0 +1,12 @@
+{
+    "node_origin": "TITAN_01",
+    "timestamp": "Sat Apr 18 15:03:52 2026",
+    "category": "STRUCTURAL_NEGLEGENCE",
+    "observation": "Exposed high-voltage wiring, Stretford Mall Walkway",
+    "sensor_readings": {
+        "pm25": 12.5,
+        "volt_detected": "LIVE"
+    },
+    "evidence_fingerprint": "fd605a901f15d1db5520eca0d96b3090ce0977372840ddfcc01f1cef4e768731",
+    "legal_standing": "CONTEMPORANEOUS_LOG"
+}

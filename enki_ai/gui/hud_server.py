@@ -474,7 +474,7 @@ _HUD_HTML = r"""<!DOCTYPE html>
           <span class="neon-amber font-bold" id="sensory-val">—</span>
         </div>
         <div class="h-1.5 bg-cyan-950 rounded-full overflow-hidden">
-          <div class="progress-bar h-full" style="background:linear-gradient(to right,#ffaa00,#ff2244);" id="sensory-bar" style="width:0%"></div>
+          <div class="progress-bar h-full" style="background:linear-gradient(to right,#ffaa00,#ff2244);width:0%" id="sensory-bar"></div>
         </div>
       </div>
 

@@ -124,14 +124,6 @@ export_stl(result_part, 'output.stl')
         print("[FAIL] output.stl missing.")
 
 if __name__ == "__main__":
-    # Ensure backend directory is current working directory for imports
-    if os.path.basename(os.getcwd()) != "backend":
-        if os.path.exists("backend"):
-            os.chdir("backend")
-            print(f"Changed working directory to {os.getcwd()}")
-        else:
-            print("Warning: Could not find backend directory.")
-
     try:
         asyncio.run(verify())
     except Exception as e:

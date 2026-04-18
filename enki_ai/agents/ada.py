@@ -39,7 +39,7 @@ def _get_gesture_controller():
     global _gesture_controller
     if _gesture_controller is None:
         try:
-            from hand_movement import GestureController
+            from enki_ai.agents.hand_movement import GestureController
             _gesture_controller = GestureController()
             print("[ADA] GestureController initialised.")
         except Exception as exc:
@@ -523,12 +523,10 @@ class AudioLoop:
         self._silence_start_time = None
         
         # Initialize ProjectManager
-        from project_manager import ProjectManager
-        # Assuming we are running from backend/ or root? 
-        # Using abspath of current file to find root
+        from enki_ai.agents.project_manager import ProjectManager
+        # Project root is three levels up from enki_ai/agents/ada.py
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        # If ada.py is in backend/, project root is one up
-        project_root = os.path.dirname(current_dir)
+        project_root = os.path.dirname(os.path.dirname(current_dir))
         self.project_manager = ProjectManager(project_root)
         
         # Sync Initial Project State

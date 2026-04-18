@@ -7,7 +7,7 @@ import asyncio
 
 # Try to import the agent, skip all tests if dependencies missing
 try:
-    from printer_agent import PrinterAgent, PrinterType, Printer
+    from enki_ai.agents.printer_agent import PrinterAgent, PrinterType, Printer
     HAS_PRINTER = True
 except ImportError as e:
     HAS_PRINTER = False

@@ -64,12 +64,12 @@ function createWindow() {
 }
 
 function startPythonBackend() {
-    const scriptPath = path.join(__dirname, '../backend/server.py');
+    const scriptPath = path.join(__dirname, '../enki_ai/agents/server.py');
     console.log(`Starting Python backend: ${scriptPath}`);
 
     // Assuming 'python' is in PATH. In prod, this would be the executable.
-    pythonProcess = spawn('python', [scriptPath], {
-        cwd: path.join(__dirname, '../backend'),
+    pythonProcess = spawn('python', ['-m', 'enki_ai.agents.server'], {
+        cwd: path.join(__dirname, '..'),
     });
 
     pythonProcess.stdout.on('data', (data) => {

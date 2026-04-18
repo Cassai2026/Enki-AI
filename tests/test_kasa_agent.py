@@ -7,7 +7,7 @@ import asyncio
 
 # Try to import the agent, skip all tests if dependencies missing
 try:
-    from kasa_agent import KasaAgent
+    from enki_ai.agents.kasa_agent import KasaAgent
     HAS_KASA = True
 except ImportError as e:
     HAS_KASA = False

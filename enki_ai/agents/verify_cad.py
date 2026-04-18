@@ -1,11 +1,7 @@
 import asyncio
 import os
-import sys
 
-# Add current directory to path so we can import modules
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from cad_agent import CadAgent
+from enki_ai.agents.cad_agent import CadAgent
 
 async def main():
     agent = CadAgent()

@@ -6,13 +6,9 @@ import os
 import sys
 from pathlib import Path
 
-# Add backend to path
-BACKEND_DIR = Path(__file__).parent.parent / "backend"
-sys.path.insert(0, str(BACKEND_DIR))
-
 # Try to import ada, skip all tests if heavy dependencies (cv2, google-genai, etc.) are missing
 try:
-    import ada as _ada  # noqa: F401 – import to trigger dependency check
+    from enki_ai.agents import ada as _ada  # noqa: F401 – import to trigger dependency check
     HAS_ADA = True
     ADA_IMPORT_ERROR = ""
 except (ImportError, Exception) as e:
@@ -30,7 +26,7 @@ class TestToolDefinitions:
     
     def test_generate_cad_tool_schema(self):
         """Test generate_cad tool has correct schema."""
-        from ada import generate_cad
+        from enki_ai.agents.ada import generate_cad
         
         assert generate_cad['name'] == 'generate_cad'
         assert 'description' in generate_cad
@@ -41,7 +37,7 @@ class TestToolDefinitions:
     
     def test_run_web_agent_tool_schema(self):
         """Test run_web_agent tool has correct schema."""
-        from ada import run_web_agent
+        from enki_ai.agents.ada import run_web_agent
         
         assert run_web_agent['name'] == 'run_web_agent'
         assert 'description' in run_web_agent
@@ -51,7 +47,7 @@ class TestToolDefinitions:
     
     def test_print_stl_tool_schema(self):
         """Test print_stl tool has correct schema."""
-        from ada import print_stl_tool
+        from enki_ai.agents.ada import print_stl_tool
         
         assert print_stl_tool['name'] == 'print_stl'
         assert 'description' in print_stl_tool
@@ -60,7 +56,7 @@ class TestToolDefinitions:
     
     def test_discover_printers_tool_schema(self):
         """Test discover_printers tool has correct schema."""
-        from ada import discover_printers_tool
+        from enki_ai.agents.ada import discover_printers_tool
         
         assert discover_printers_tool['name'] == 'discover_printers'
         assert 'description' in discover_printers_tool
@@ -68,7 +64,7 @@ class TestToolDefinitions:
     
     def test_list_smart_devices_tool_schema(self):
         """Test list_smart_devices tool has correct schema."""
-        from ada import list_smart_devices_tool
+        from enki_ai.agents.ada import list_smart_devices_tool
         
         assert list_smart_devices_tool['name'] == 'list_smart_devices'
         assert 'description' in list_smart_devices_tool
@@ -76,7 +72,7 @@ class TestToolDefinitions:
     
     def test_control_light_tool_schema(self):
         """Test control_light tool has correct schema."""
-        from ada import control_light_tool
+        from enki_ai.agents.ada import control_light_tool
         
         assert control_light_tool['name'] == 'control_light'
         assert 'parameters' in control_light_tool
@@ -87,14 +83,14 @@ class TestToolDefinitions:
     
     def test_list_projects_tool_schema(self):
         """Test list_projects tool has correct schema."""
-        from ada import list_projects_tool
+        from enki_ai.agents.ada import list_projects_tool
         
         assert list_projects_tool['name'] == 'list_projects'
         print(f"list_projects tool: {list_projects_tool['name']}")
     
     def test_iterate_cad_tool_schema(self):
         """Test iterate_cad tool has correct schema."""
-        from ada import iterate_cad_tool
+        from enki_ai.agents.ada import iterate_cad_tool
         
         assert iterate_cad_tool['name'] == 'iterate_cad'
         print(f"iterate_cad tool: {iterate_cad_tool['name']}")
@@ -105,13 +101,13 @@ class TestAudioLoopClass:
     
     def test_audioloop_class_exists(self):
         """Test AudioLoop class can be imported."""
-        from ada import AudioLoop
+        from enki_ai.agents.ada import AudioLoop
         assert AudioLoop is not None
         print("AudioLoop class imported successfully")
     
     def test_audioloop_methods(self):
         """Test AudioLoop has required methods."""
-        from ada import AudioLoop
+        from enki_ai.agents.ada import AudioLoop
         
         required_methods = [
             'run',
@@ -138,17 +134,17 @@ class TestFileOperations:
     
     def test_read_directory_method_exists(self):
         """Test handle_read_directory exists."""
-        from ada import AudioLoop
+        from enki_ai.agents.ada import AudioLoop
         assert hasattr(AudioLoop, 'handle_read_directory')
     
     def test_read_file_method_exists(self):
         """Test handle_read_file exists."""
-        from ada import AudioLoop
+        from enki_ai.agents.ada import AudioLoop
         assert hasattr(AudioLoop, 'handle_read_file')
     
     def test_write_file_method_exists(self):
         """Test handle_write_file exists."""
-        from ada import AudioLoop
+        from enki_ai.agents.ada import AudioLoop
         assert hasattr(AudioLoop, 'handle_write_file')
 
 
@@ -157,13 +153,13 @@ class TestLiveConnectConfig:
     
     def test_config_exists(self):
         """Test config is defined."""
-        from ada import config
+        from enki_ai.agents.ada import config
         assert config is not None
         print("LiveConnectConfig exists")
     
     def test_config_has_audio_modality(self):
         """Test config includes audio modality."""
-        from ada import config
+        from enki_ai.agents.ada import config
         assert 'AUDIO' in config.response_modalities
         print("Audio modality configured")
 
@@ -173,7 +169,7 @@ class TestToolPermissions:
     
     def test_update_permissions_method(self):
         """Test update_permissions method exists."""
-        from ada import AudioLoop
+        from enki_ai.agents.ada import AudioLoop
         assert hasattr(AudioLoop, 'update_permissions')
         print("update_permissions method exists")
 
@@ -183,25 +179,25 @@ class TestAgentImports:
     
     def test_cad_agent_import(self):
         """Test CadAgent is imported."""
-        from ada import CadAgent
+        from enki_ai.agents.ada import CadAgent
         assert CadAgent is not None
         print("CadAgent imported")
     
     def test_web_agent_import(self):
         """Test WebAgent is imported."""
-        from ada import WebAgent
+        from enki_ai.agents.ada import WebAgent
         assert WebAgent is not None
         print("WebAgent imported")
     
     def test_kasa_agent_import(self):
         """Test KasaAgent is imported."""
-        from ada import KasaAgent
+        from enki_ai.agents.ada import KasaAgent
         assert KasaAgent is not None
         print("KasaAgent imported")
     
     def test_printer_agent_import(self):
         """Test PrinterAgent is imported."""
-        from ada import PrinterAgent
+        from enki_ai.agents.ada import PrinterAgent
         assert PrinterAgent is not None
         print("PrinterAgent imported")
 
@@ -211,6 +207,6 @@ class TestToolConfirmation:
     
     def test_resolve_tool_confirmation_method(self):
         """Test resolve_tool_confirmation exists."""
-        from ada import AudioLoop
+        from enki_ai.agents.ada import AudioLoop
         assert hasattr(AudioLoop, 'resolve_tool_confirmation')
         print("resolve_tool_confirmation method exists")

@@ -1,4 +1,18 @@
 # backend/core/knowledge_base/sovereign_ingest.py
+# DEPRECATED — use enki_ai.core.ingest_mission_data instead.
+# This file is kept for backwards compatibility and will be removed in a
+# future release.  Run:
+#
+#     python -m enki_ai.core.ingest_mission_data [--docs <path>] [--db <path>]
+#
+import warnings
+warnings.warn(
+    "sovereign_ingest.py is deprecated. "
+    "Use 'python -m enki_ai.core.ingest_mission_data' instead.",
+    DeprecationWarning,
+    stacklevel=1,
+)
+
 import sqlite3
 import os
 from docx import Document

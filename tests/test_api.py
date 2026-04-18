@@ -212,3 +212,132 @@ def test_get_category_data(client):
     resp = client.get("/api/data/prefs")
     body = resp.get_json()
     assert body["count"] == 2
+
+
+# ---------------------------------------------------------------------------
+# GET /api/governance/laws
+# ---------------------------------------------------------------------------
+
+
+def test_governance_laws_returns_ten(client):
+    resp = client.get("/api/governance/laws")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["status"] == "success"
+    assert body["count"] == 10
+    assert len(body["laws"]) == 10
+
+
+def test_governance_laws_have_required_fields(client):
+    resp = client.get("/api/governance/laws")
+    body = resp.get_json()
+    for law in body["laws"]:
+        assert "id" in law
+        assert "name" in law
+        assert "principle" in law
+        assert "plain_english" in law
+
+
+def test_governance_laws_ids_are_unique(client):
+    resp = client.get("/api/governance/laws")
+    body = resp.get_json()
+    ids = [l["id"] for l in body["laws"]]
+    assert len(ids) == len(set(ids))
+
+
+# ---------------------------------------------------------------------------
+# POST /api/governance/check
+# ---------------------------------------------------------------------------
+
+
+def test_governance_check_permitted_action(client):
+    resp = client.post(
+        "/api/governance/check",
+        json={"action": "play_sound", "context": {}},
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["status"] == "permitted"
+    assert body["violations"] == []
+
+
+def test_governance_check_violation_l02(client):
+    resp = client.post(
+        "/api/governance/check",
+        json={"action": "recommend_support", "context": {}},
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["status"] == "violation"
+    ids = [v["id"] for v in body["violations"]]
+    assert "L02" in ids
+
+
+def test_governance_check_violation_resolved_with_context(client):
+    resp = client.post(
+        "/api/governance/check",
+        json={"action": "recommend_support", "context": {"human_reviewed": True}},
+    )
+    body = resp.get_json()
+    assert body["status"] == "permitted"
+
+
+def test_governance_check_replaces_human_violates_l07(client):
+    resp = client.post(
+        "/api/governance/check",
+        json={"action": "respond_to_learner", "context": {"replaces_human": True}},
+    )
+    body = resp.get_json()
+    assert body["status"] == "violation"
+    ids = [v["id"] for v in body["violations"]]
+    assert "L07" in ids
+
+
+def test_governance_check_missing_action(client):
+    resp = client.post("/api/governance/check", json={"context": {}})
+    assert resp.status_code == 400
+
+
+def test_governance_check_empty_action(client):
+    resp = client.post("/api/governance/check", json={"action": "   "})
+    assert resp.status_code == 400
+
+
+def test_governance_check_action_too_long(client):
+    resp = client.post(
+        "/api/governance/check",
+        json={"action": "a" * 200},
+    )
+    assert resp.status_code == 400
+
+
+def test_governance_check_no_body(client):
+    resp = client.post("/api/governance/check")
+    assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# GET /api/governance/audit-log
+# ---------------------------------------------------------------------------
+
+
+def test_governance_audit_log_returns_entries(client):
+    # Make a couple of checks to populate the log
+    client.post("/api/governance/check", json={"action": "play_sound"})
+    client.post("/api/governance/check", json={"action": "recommend_support"})
+    resp = client.get("/api/governance/audit-log")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["status"] == "success"
+    assert body["count"] >= 2
+
+
+def test_governance_audit_log_entry_fields(client):
+    client.post("/api/governance/check", json={"action": "play_sound"})
+    resp = client.get("/api/governance/audit-log")
+    body = resp.get_json()
+    entry = body["entries"][-1]
+    assert "action" in entry
+    assert "rationale" in entry
+    assert "human_reviewed" in entry
+    assert "timestamp" in entry

@@ -111,7 +111,15 @@ class SovereignBrain:
 
         if _GENAI_AVAILABLE:
             api_key = config.GEMINI_API_KEY or os.environ.get("GEMINI_API_KEY")
-            self._client = _genai.Client(api_key=api_key) if api_key else _genai.Client()
+            if api_key:
+                self._client = _genai.Client(api_key=api_key)
+            else:
+                log.warning(
+                    "[SovereignBrain] GEMINI_API_KEY not set — "
+                    "falling back to SDK auto-detection. "
+                    "Queries will fail if the key is not in the environment."
+                )
+                self._client = _genai.Client()
         else:
             self._client = None
 
@@ -174,8 +182,8 @@ class SovereignBrain:
 
         full_prompt = (
             f"{_SYSTEM_PROMPT}\n\n"
-            f"{'Context (recent turns):' + chr(10) + context_block + chr(10) if context_block else ''}"
-            f"User: {prompt}"
+            + (f"Context (recent turns):\n{context_block}\n" if context_block else "")
+            + f"User: {prompt}"
         )
 
         # 3 — LLM call

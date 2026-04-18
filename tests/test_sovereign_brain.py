@@ -146,18 +146,18 @@ def test_query_includes_history_in_prompt(brain_offline):
     original = _sb._GENAI_AVAILABLE
     try:
         _sb._GENAI_AVAILABLE = True
-        # First round — populates memory
-        brain_offline.query("First question")
-        # Second round — inspect what gets passed to the mock client
+        # First round — populates memory with a specific, recognisable phrase
+        brain_offline.query("Tell me about the Sovereign Equation")
+        # Second round — the prompt fed to Gemini should contain the first turn
         brain_offline.query("Follow-up question")
     finally:
         _sb._GENAI_AVAILABLE = original
 
     calls = brain_offline._client.models.generate_content.call_args_list
     assert len(calls) >= 2, "Expected at least 2 Gemini calls"
-    # The second call's prompt should reference the previous turn
+    # The second call's prompt must contain the content of the first user message
     second_prompt = calls[1].kwargs.get("contents") or calls[1].args[0]
-    assert "User:" in second_prompt or "user" in second_prompt.lower()
+    assert "Sovereign Equation" in second_prompt
 
 
 # ---------------------------------------------------------------------------

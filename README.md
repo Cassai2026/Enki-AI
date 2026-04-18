@@ -11,8 +11,64 @@ Enki is not a product; it is a **Sovereign Operating System** designed for the 4
 - **Sovereignty:** No gated access. No "Rinse." No compliance-correction of neurodivergent thought.
 
 ## 🚀 HOW TO RUN
-1. Install Python 3.10+
-2. Run `python enki_ai/genesis_launch.py`
+
+### Option 1 — Sovereign HUD *(recommended)*
+
+A browser-based cyberpunk dashboard: module status grid, human-state metrics, live command console, real-time WebSocket updates.
+
+```bash
+pip install -r requirements.txt
+python enki_ai/genesis_launch.py          # integrity check + HUD (auto-opens browser)
+```
+
+| Flag | Effect |
+|------|--------|
+| `--no-browser` | Start HUD server without opening the browser |
+| `--no-hud` | Integrity check only, no server |
+
+Direct launch:
+```bash
+python -m enki_ai.gui.hud_server          # HUD served at http://localhost:7777
+```
+
+---
+
+### Option 2 — ADA Electron App *(full AI assistant)*
+
+Voice, CAD generation, browser automation, smart-home and 3D-printer control.
+Requires **Node.js 18+**.
+
+```bash
+# Terminal 1 — Python backend
+pip install -r requirements.txt
+python backend/server.py
+
+# Terminal 2 — Electron frontend
+npm install
+npm run dev
+```
+
+---
+
+### Option 3 — PyQt5 Cyberpunk GUI
+
+Standalone desktop interface (requires PyQt5).
+
+```bash
+pip install PyQt5
+python -m enki_ai.gui.jarvis_gui_cyberpunk
+```
+
+---
+
+### Option 4 — Flask REST API only
+
+```bash
+python -m enki_ai.api.web_server          # REST API on http://localhost:5000
+```
+
+---
+
 3. Connect your Animus. Leave the "Silly Boy" logic at the door.
 
 OUSH. THE ARCHITECT HAS SPOKEN.

@@ -51,7 +51,7 @@ def _get_gesture_controller():
 # detected pinch is considered to be targeting the HUD zone.
 _HUD_Y_THRESHOLD = 0.35
 
-# Path to the Enki knowledge SQLite database produced by ingest_mission_data.py.
+# Path to the Enki knowledge SQLite database produced by enki_ai/core/ingest_mission_data.py.
 # Resolved relative to the repo root (three levels above enki_ai/agents/).
 _ENKI_KNOWLEDGE_DB = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),

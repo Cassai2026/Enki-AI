@@ -1,50 +1,24 @@
-﻿import json
-import os
-import hashlib
-import time
+﻿import os
+import datetime
 
-class MasterEvidenceVault:
+class EvidenceVault:
     def __init__(self):
-        self.source_dir = "enki_ai/reports"
-        self.vault_file = "enki_ai/game_engine/data/MASTER_VAULT_INDEX.json"
-        self.archive_sig = "10^47-NODE-29-SOVEREIGN"
+        self.vault_path = "enki_ai/reports/evidence_vault/"
+        if not os.path.exists(self.vault_path):
+            os.makedirs(self.vault_path)
 
-    def seal_the_vault(self):
-        """
-        Gathers every forensic artifact created and seals it 
-        with a master SHA-256 integrity hash.
-        """
-        print(f"\n[VAULT] 🔐 INITIATING MASTER SEAL: {self.archive_sig}")
+    def secure_artifact(self, artifact_name, content):
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
+        filename = f"{timestamp}_{artifact_name}.txt"
         
-        vault_index = {
-            "seal_time": time.ctime(),
-            "artifacts": []
-        }
-
-        # Recursively find all txt and json reports
-        for root, dirs, files in os.walk(self.source_dir):
-            for file in files:
-                if file.endswith(('.txt', '.json')):
-                    file_path = os.path.join(root, file)
-                    
-                    # Generate file hash
-                    with open(file_path, "rb") as f:
-                        f_hash = hashlib.sha256(f.read()).hexdigest()
-                    
-                    vault_index["artifacts"].append({
-                        "file": file,
-                        "path": file_path,
-                        "integrity_hash": f_hash
-                    })
-                    print(f"[HUD] SEALED: {file}")
-
-        # Save the Master Index
-        with open(self.vault_file, "w") as f:
-            json.dump(vault_index, f, indent=4)
+        with open(os.path.join(self.vault_path, filename), "w") as f:
+            f.write(f"--- SECURE ARTIFACT: {artifact_name} ---\n")
+            f.write(f"TIMESTAMP: {timestamp}\n")
+            f.write(f"SOURCE: Enki-AI Forensic Auditor\n\n")
+            f.write(content)
             
-        print(f"\n[HUD] ✅ VAULT SECURED. {len(vault_index['artifacts'])} ARTIFACTS HARDENED.")
-        print(f"[HUD] MASTER HASH: {hashlib.sha256(str(vault_index).encode()).hexdigest()}")
+        print(f"[HUD] ✅ ARTIFACT SECURED IN VAULT: {filename}")
 
 if __name__ == "__main__":
-    vault = MasterEvidenceVault()
-    vault.seal_the_vault()
+    vault = EvidenceVault()
+    vault.secure_artifact("BRUNTWOOD_LOAN_SNAPSHOT", "Evidence of £12.64m loan structure via Trafford Council.")

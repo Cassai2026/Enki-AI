@@ -1,0 +1,5 @@
+--- SECURE ARTIFACT: BRUNTWOOD_LOAN_SNAPSHOT ---
+TIMESTAMP: 2026-04-18_16-32
+SOURCE: Enki-AI Forensic Auditor
+
+Evidence of £12.64m loan structure via Trafford Council.

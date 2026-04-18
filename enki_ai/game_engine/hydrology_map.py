@@ -1,9 +1,19 @@
-﻿def overlay_drainage_grid(groundwater_lvl):
-    """4D Overlay for Oakley HUD: Tracking the 50m Deep Stone Drainage."""
-    print(f"\n[HUD] 🌊 OVERLAY ACTIVE: Stretford Water Table")
-    print(f"[DATA] Groundwater Saturation: {groundwater_lvl}%")
-    if groundwater_lvl > 85:
-        print("[ALERT] 🏗️ Opening Section 20 Drainage Sluice to protect Primary School.")
-    else:
-        print("[HUD] ✅ Fertile Gradient Stable. The Stinking Ditch is now a Garden.")
-if __name__ == "__main__": overlay_drainage_grid(78)
+﻿import json
+
+class HydrologyMap:
+    def __init__(self):
+        self.spec_file = "enki_ai/game_engine/data/hydrology_specs.json"
+
+    def audit_water_integrity(self):
+        with open(self.spec_file, 'r') as f: data = json.load(f)
+        print(f"\n[SUB-SURFACE] 💧 AUDITING MERSEY BASIN HYDROLOGY...")
+        
+        if data['ph_level'] < 6.0 or data['ph_level'] > 8.0:
+            print(f"🚩 ALERT: PH LEAKAGE DETECTED ({data['ph_level']}). Possible industrial runoff.")
+        else:
+            print(f"✅ STATUS: Soil PH stable at {data['ph_level']}.")
+        
+        print(f"[HUD] SATURATION: {data['saturation_index']*100}% | AQUIFER: {data['aquifer_depth_m']}m")
+
+if __name__ == "__main__":
+    HydrologyMap().audit_water_integrity()

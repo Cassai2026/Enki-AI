@@ -1,0 +1,7 @@
+--- CHRIS OGLESBY: GOVERNANCE CONFLICT MAP ---
+NODE: Manchester_University_Board | SECTOR: Academic
+NODE: Bruntwood_SciTech_CEO | SECTOR: Private
+NODE: Manchester_Climate_Change_Board | SECTOR: Public_Policy
+
+LEGAL ANALYSIS: The concentration of power across these three sectors
+creates an 'Antitrust Static' that limits competitive procurement in Stretford.

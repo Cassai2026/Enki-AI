@@ -1,0 +1,8 @@
+{
+    "mentee_id": "MENTEE_01",
+    "archetype": "Sovereign Core",
+    "audit_result": {
+        "1": "45.00%"
+    },
+    "verdict": "\ud83d\udea8 STATIC_DETECTED"
+}

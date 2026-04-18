@@ -1,0 +1,9 @@
+{
+    "mentee_id": "MENTEE_02",
+    "archetype": "Silent Cartographer",
+    "audit_result": {
+        "3": "0.00%",
+        "6": "15.00%"
+    },
+    "verdict": "\ud83d\udea8 STATIC_DETECTED"
+}

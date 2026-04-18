@@ -178,12 +178,24 @@ npm install
 ```
 
 ### 4. 🔐 Face Authentication Setup
-To use the secure voice features, Enki AI needs to know what you look like.
 
-1. Take a clear photo of your face (or use an existing one).
-2. Rename the file to `reference.jpg`.
-3. Drag and drop this file into the `Enki-AI/enki_ai/agents` folder.
-4. (Optional) You can toggle this feature on/off in `settings.json` by changing `"face_auth_enabled": true/false`.
+Enki AI now supports **multi-user registry-based face authentication**.  The system
+verifies the live camera feed (the *Animus pulse*) against every enrolled user in the
+`auth/registry/` directory.
+
+**Enrol a user:**
+1. Take a clear, front-facing photo of the user.
+2. Name the file `<username>.jpg` (e.g. `naz.jpg`, `admin.jpg`).
+3. Drop the file into `Enki-AI/auth/registry/`.
+4. Restart the backend — the authenticator will automatically load all images.
+
+**Multi-user behaviour:** If any enrolled face matches the live camera feed, access is
+granted.  You can enrol as many users as needed.
+
+**Backwards compatibility:** A single `reference.jpg` placed in
+`enki_ai/agents/` is still accepted as a legacy one-entry registry.
+
+(Optional) Toggle the feature via `settings.json` → `"face_auth_enabled": true/false`.
 
 ---
 
@@ -338,7 +350,65 @@ This is a server-side issue from the Gemini API. Simply reconnect by clicking th
 
 ## 📸 What It Looks Like
 
-*Coming soon! Screenshots and demo videos will be added here.*
+### 🎬 Demo Videos
+
+> Demo recordings will be added to [`demo/`](demo/).
+> The filenames below are planned placeholders — add the actual files to make them appear.
+
+| Planned Demo File | Description |
+|-------------------|-------------|
+| `demo/voice_cad.mp4` | Voice-to-CAD: speak a shape, watch it render in 3D |
+| `demo/face_auth.mp4` | Face authentication via registry-based Animus pulse |
+| `demo/gesture_hud.mp4` | Minority Report gesture HUD and pinch-to-query |
+| `demo/sovereign_fallback.mp4` | Sovereign Fallback mode under API outage |
+
+### 📷 Screenshots
+
+> Screenshots will be added to [`screenshots/`](screenshots/).
+> The filenames below are planned placeholders — add the actual files to make them appear.
+
+| Planned Screenshot File | Description |
+|-------------------------|-------------|
+| `screenshots/main_ui.png` | Main Electron window with 3D CAD viewer |
+| `screenshots/auth_screen.png` | Face authentication lock screen |
+| `screenshots/gesture_overlay.png` | MediaPipe hand-tracking overlay |
+| `screenshots/mobile_hud.png` | Eternius 4D mobile HUD (AR overlay) |
+
+---
+
+## 🔬 Active Research Nodes
+
+The following directories are **active research branches** of the Eternius 4D environment.
+They are under active development and not yet part of the production bundle.
+
+### 📱 [`/mobile`](mobile/) — Eternius 4D Mobile Layer
+
+A React Native application (Expo) that extends the Enki AI kernel to handheld devices.
+
+| Component | Status |
+|-----------|--------|
+| AR holographic HUD | In research |
+| Gemini Live audio relay | In research |
+| WebRTC audio streaming to desktop Node | In research |
+
+### 🎮 [`/game_engine`](game_engine/) — Eternius 4D Game Engine
+
+A Python-based spatial / simulation layer that models the Eternius 4D environment.
+
+| Module | Purpose |
+|--------|---------|
+| `biodome_engine.py` | Procedural biome simulation |
+| `elemental_engine.py` | Elemental physics layer |
+| `evolution_engine.py` | Adaptive agent evolution |
+| `frequency_shield.py` | Frequency-based defence mesh |
+| `gesture_bridge.py` | Cross-platform gesture event bridge |
+| `inventory_system.py` | Persistent item/artefact registry |
+| `mission_control.py` | Mission orchestration & goal tracking |
+| `offshore_engine.py` | Off-chain data anchoring stub |
+| `quest_viewer.py` | Quest display & progress renderer |
+| `roi_engine.py` | Region-of-interest spatial indexer |
+| `vanguard_deployment.py` | Multi-agent deployment scheduler |
+| `webrtc_mesh.py` | Peer-to-peer WebRTC mesh fabric |
 
 ---
 
@@ -385,7 +455,7 @@ Enki-AI/
 | **Camera Required** | Face auth and gesture control need a working webcam. |
 | **Gemini API Quota** | Free tier has rate limits; heavy CAD iteration may hit limits. |
 | **Network Dependency** | Requires internet for Gemini API (no offline mode). |
-| **Single User** | Face auth recognizes one person (the `reference.jpg`). |
+| **Multi-User Auth** | Face auth supports multiple enrolled users via `auth/registry/`. |
 
 ---
 
@@ -445,3 +515,91 @@ Share and adapt freely; give credit to Nazir Louis; no commercial use; share-ali
   <strong>Built with 🤖 by Nazir Louis — Enki AI Ultimate ADA Edition</strong><br>
   <em>Bridging AI, CAD, and Vision in a Single Interface</em>
 </p>
+
+---
+
+## 📋 Technical Manifest — Enki AI Node Registry
+
+> Every node below is subject to the **GNU Affero General Public License v3 (AGPLv3)**.
+> Network-accessed deployments must make their full source available.
+> Commercial use requires explicit written permission from the copyright holder.
+
+### The 17 Nodes
+
+| # | Node | Module Path | AGPLv3 | Description |
+|---|------|-------------|--------|-------------|
+| 01 | **ADA Core** | `enki_ai/agents/ada.py` | ✅ | Gemini Live Audio integration, VAD, tool dispatch |
+| 02 | **Governance Engine** | `enki_ai/core/governance.py` | ✅ | 10-Law DHCAIGM runtime enforcer |
+| 03 | **JARVIS Core** | `enki_ai/core/jarvis_core.py` | ✅ | Command routing, NLP normalisation |
+| 04 | **Face Authenticator** | `enki_ai/agents/authenticator.py` | ✅ | Multi-user registry Animus pulse verifier |
+| 05 | **CAD Agent** | `enki_ai/agents/cad_agent.py` | ✅ | Voice-to-build123d parametric CAD generator |
+| 06 | **Web Agent** | `enki_ai/agents/web_agent.py` | ✅ | Playwright autonomous browser automation |
+| 07 | **Kasa Agent** | `enki_ai/agents/kasa_agent.py` | ✅ | TP-Link smart home control |
+| 08 | **Printer Agent** | `enki_ai/agents/printer_agent.py` | ✅ | 3D printer discovery, slicing & job submission |
+| 09 | **Project Manager** | `enki_ai/agents/project_manager.py` | ✅ | Persistent cross-session project context |
+| 10 | **Sovereign Fallback** | `enki_ai/agents/gemini_wrapper.py` | ✅ | 5xx/latency circuit-breaker → Ollama/cache |
+| 11 | **REST API** | `enki_ai/api/web_server.py` | ✅ | Flask REST endpoint layer |
+| 12 | **Database** | `enki_ai/api/database.py` | ✅ | SQLite persistence layer |
+| 13 | **SDG Enforcer** | `enki_ai/core/sdg_enforcer.py` | ✅ | UN SDG alignment validator |
+| 14 | **Sovereign Ingest** | `enki_ai/core/sovereign_ingest.py` | ✅ | Sovereign knowledge ingestion pipeline |
+| 15 | **Knowledge Base** | `knowledge_base/` | ✅ | Sumerian law corpus & domain knowledge |
+| 16 | **Game Engine** | `game_engine/` | ✅ | Eternius 4D spatial simulation (research) |
+| 17 | **Mobile Layer** | `mobile/` | ✅ | Eternius 4D AR HUD — React Native (research) |
+
+### Local Hardware Initialisation (64 GB Machine)
+
+These steps provision a 64 GB RAM workstation for full local operation including
+the Sovereign Fallback Ollama node.
+
+```bash
+# ── 1. Clone the repository ──────────────────────────────────────────────
+git clone https://github.com/Cassai2026/Enki-AI.git
+cd Enki-AI
+
+# ── 2. Python environment (conda recommended) ────────────────────────────
+conda create -n enki-ai python=3.11 -y
+conda activate enki-ai
+
+# macOS: brew install portaudio
+# Ubuntu/Debian: sudo apt-get install -y portaudio19-dev
+pip install -r requirements.txt
+playwright install chromium
+
+# ── 3. Frontend ───────────────────────────────────────────────────────────
+node --version   # must be v18+
+npm install
+
+# ── 4. API key ────────────────────────────────────────────────────────────
+echo "GEMINI_API_KEY=your_key_here" > .env
+
+# ── 5. Enrol face(s) for local auth ──────────────────────────────────────
+mkdir -p auth/registry
+# Copy <username>.jpg files into auth/registry/
+
+# ── 6. Sovereign Fallback — install Ollama + TinyLlama ───────────────────
+# Download Ollama from https://ollama.com/download
+ollama pull tinyllama          # ~600 MB — fits comfortably in 64 GB RAM
+# Ollama serves at http://localhost:11434 by default
+
+# ── 7. Launch ─────────────────────────────────────────────────────────────
+conda activate enki-ai
+npm run dev
+```
+
+**Memory allocation guide for 64 GB:**
+
+| Component | Approximate RAM |
+|-----------|----------------|
+| Python backend (enki_ai) | ~400 MB |
+| Electron + React frontend | ~300 MB |
+| MediaPipe (face + hands) | ~200 MB |
+| TinyLlama via Ollama | ~600 MB |
+| build123d CAD operations | ~1–2 GB (peak) |
+| Operating system + headroom | ~4 GB |
+| **Total reserved** | **~8 GB** |
+| **Available for other tasks** | **~56 GB** |
+
+> **Commit convention**: every commit to this repository must be prefixed
+> with `[KERNEL_UPDATE]` for feature/architecture changes or `[SHIELD_FIX]`
+> for security/stability patches.  Code that introduces unnecessary iteration
+> over data structures should be flagged as *Sloth* and refactored before merge.

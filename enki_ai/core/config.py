@@ -109,3 +109,11 @@ DB_PATH: str = os.environ.get(
 # Logging
 # ---------------------------------------------------------------------------
 LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
+
+# ---------------------------------------------------------------------------
+# Gemini LLM (SovereignBrain)
+# ---------------------------------------------------------------------------
+# The google-genai SDK also reads GEMINI_API_KEY automatically; setting it
+# here gives the rest of the codebase a single, consistent config source.
+GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-exp")

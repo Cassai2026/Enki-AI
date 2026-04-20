@@ -162,7 +162,7 @@ setup_python() {
     google-genai
 
   # Audio (best-effort — may require PortAudio headers)
-  pip install --quiet pyaudio || warn "pyaudio install failed — voice input disabled. Install portaudio19-dev and retry."
+  pip install --quiet pyaudio || warn "pyaudio install failed — voice input disabled. Install the PortAudio development headers for your distro (e.g. portaudio19-dev on Debian/Ubuntu, portaudio-devel on Fedora, portaudio on Arch) and retry."
   pip install --quiet SpeechRecognition || warn "SpeechRecognition install failed."
 
   if [ "${DEV_MODE}" = true ]; then

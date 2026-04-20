@@ -69,6 +69,49 @@ python -m enki_ai.api.web_server          # REST API on http://localhost:5000
 
 ---
 
+### Option 5 — Linux OS Integration (modular agents)
+
+Each Enki agent runs as an independent Linux process, keeping memory usage low.
+Agents are loaded on the fly — only the ones you need are in memory at any time.
+
+```bash
+# One-command setup (installs Piper TTS, Python deps, systemd services)
+chmod +x linux/install.sh
+./linux/install.sh
+
+# Start individual agents as background services
+systemctl --user start enki-api.service      # REST API
+systemctl --user start enki-hud.service      # Sovereign HUD
+systemctl --user start enki-brain.service    # LLM (Gemini)
+systemctl --user start enki-jarvis.service   # Voice / wake-word
+
+# Enable on login
+systemctl --user enable enki-api.service enki-hud.service
+
+# Manage all services at once
+./linux/systemd/manage-services.sh status
+./linux/systemd/manage-services.sh start
+./linux/systemd/manage-services.sh stop
+```
+
+**Lazy agent loading** (Python API — on-demand / cloud-load):
+
+```python
+from enki_ai.core.agent_loader import agent_loader
+
+# Load only what you need — everything else stays unloaded
+brain = agent_loader.get("sovereign_brain")
+response = brain.query("What was our last major build today?")
+
+# Free memory when done
+agent_loader.unload("sovereign_brain")
+
+# See what's loaded right now
+print(agent_loader.loaded_agents())
+```
+
+---
+
 3. Connect your Animus. Leave the "Silly Boy" logic at the door.
 
 OUSH. THE ARCHITECT HAS SPOKEN.

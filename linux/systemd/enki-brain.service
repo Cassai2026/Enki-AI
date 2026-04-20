@@ -1,0 +1,19 @@
+[Unit]
+Description=Enki-AI Sovereign Brain (Gemini LLM agent)
+Documentation=https://github.com/Cassai2026/Enki-AI
+After=network.target enki-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=__REPO_ROOT__
+Environment="PATH=__VENV_DIR__/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=__REPO_ROOT__"
+EnvironmentFile=__REPO_ROOT__/.env
+ExecStart=__VENV_DIR__/bin/python -m enki_ai.core.sovereign_brain
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

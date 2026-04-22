@@ -4,9 +4,6 @@ import sys
 import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 
-# Add current directory to path to import cad_agent
-sys.path.append(os.getcwd())
-
 # Mock dependencies that might be missing or require API keys
 mock_genai = MagicMock()
 mock_types = MagicMock()
@@ -34,13 +31,13 @@ with patch.dict('sys.modules', modules_to_patch):
     # Try importing internal modules
     # If pydantic is missing, mock it too (optional)
     try:
-        from cad_agent import CadAgent
+        from enki_ai.agents.cad_agent import CadAgent
     except ImportError:
         print("Could not import cad_agent directly. Trying to mock pydantic/dotenv if needed.")
         modules_to_patch['pydantic'] = MagicMock()
         modules_to_patch['dotenv'] = MagicMock()
         with patch.dict('sys.modules', modules_to_patch):
-            from cad_agent import CadAgent
+            from enki_ai.agents.cad_agent import CadAgent
 
 async def verify():
     print("Verifying CAD Iteration Logic...")
@@ -127,14 +124,6 @@ export_stl(result_part, 'output.stl')
         print("[FAIL] output.stl missing.")
 
 if __name__ == "__main__":
-    # Ensure backend directory is current working directory for imports
-    if os.path.basename(os.getcwd()) != "backend":
-        if os.path.exists("backend"):
-            os.chdir("backend")
-            print(f"Changed working directory to {os.getcwd()}")
-        else:
-            print("Warning: Could not find backend directory.")
-
     try:
         asyncio.run(verify())
     except Exception as e:

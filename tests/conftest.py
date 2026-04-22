@@ -7,12 +7,8 @@ import os
 import json
 from pathlib import Path
 
-# Add backend to path
-BACKEND_DIR = Path(__file__).parent.parent / "backend"
-sys.path.insert(0, str(BACKEND_DIR))
-
 # Settings file path
-SETTINGS_FILE = BACKEND_DIR / "settings.json"
+SETTINGS_FILE = Path(__file__).parent.parent / "enki_ai" / "agents" / "settings.json"
 
 
 @pytest.fixture(scope="session")

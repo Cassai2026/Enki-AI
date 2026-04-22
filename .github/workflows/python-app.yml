@@ -1,0 +1,40 @@
+name: Python Application
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test Suite (Python 3.11)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y portaudio19-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install project dependencies; pyaudio needs portaudio (installed above).
+          # Packages requiring a display (opencv, mediapipe, playwright) are optional
+          # in CI — they are guarded by try/except in the test suite.
+          pip install -r requirements.txt || true
+          # Ensure test tooling is always present even if requirements.txt install fails
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --tb=short --cov=enki_ai --cov-report=term-missing

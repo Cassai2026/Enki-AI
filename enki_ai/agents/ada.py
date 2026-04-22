@@ -23,10 +23,7 @@ if sys.version_info < (3, 11, 0):
     asyncio.TaskGroup = taskgroup.TaskGroup
     asyncio.ExceptionGroup = exceptiongroup.ExceptionGroup
 
-from tools import tools_list
-
-# Make the enki_ai package importable when ada.py is executed from backend/
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from enki_ai.agents.tools import tools_list
 from enki_ai.core.governance import engine as governance_engine
 
 # ---------------------------------------------------------------------------
@@ -42,7 +39,7 @@ def _get_gesture_controller():
     global _gesture_controller
     if _gesture_controller is None:
         try:
-            from hand_movement import GestureController
+            from enki_ai.agents.hand_movement import GestureController
             _gesture_controller = GestureController()
             print("[ADA] GestureController initialised.")
         except Exception as exc:
@@ -54,10 +51,10 @@ def _get_gesture_controller():
 # detected pinch is considered to be targeting the HUD zone.
 _HUD_Y_THRESHOLD = 0.35
 
-# Path to the Enki knowledge SQLite database produced by ingest_mission_data.py.
-# Resolved relative to the repo root (one level above backend/).
+# Path to the Enki knowledge SQLite database produced by enki_ai/core/ingest_mission_data.py.
+# Resolved relative to the repo root (three levels above enki_ai/agents/).
 _ENKI_KNOWLEDGE_DB = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "enki_knowledge.db",
 )
 
@@ -455,10 +452,10 @@ config = types.LiveConnectConfig(
 
 pya = pyaudio.PyAudio()
 
-from cad_agent import CadAgent
-from web_agent import WebAgent
-from kasa_agent import KasaAgent
-from printer_agent import PrinterAgent
+from enki_ai.agents.cad_agent import CadAgent
+from enki_ai.agents.web_agent import WebAgent
+from enki_ai.agents.kasa_agent import KasaAgent
+from enki_ai.agents.printer_agent import PrinterAgent
 
 class AudioLoop:
     def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, input_device_index=None, input_device_name=None, output_device_index=None, kasa_agent=None, audio_source_queue=None):
@@ -526,12 +523,10 @@ class AudioLoop:
         self._silence_start_time = None
         
         # Initialize ProjectManager
-        from project_manager import ProjectManager
-        # Assuming we are running from backend/ or root? 
-        # Using abspath of current file to find root
+        from enki_ai.agents.project_manager import ProjectManager
+        # Project root is three levels up from enki_ai/agents/ada.py
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        # If ada.py is in backend/, project root is one up
-        project_root = os.path.dirname(current_dir)
+        project_root = os.path.dirname(os.path.dirname(current_dir))
         self.project_manager = ProjectManager(project_root)
         
         # Sync Initial Project State

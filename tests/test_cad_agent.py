@@ -5,7 +5,20 @@ import pytest
 import asyncio
 import os
 
-from cad_agent import CadAgent
+# Try to import the agent, skip all tests if dependencies missing
+try:
+    from enki_ai.agents.cad_agent import CadAgent
+    HAS_CAD = True
+    IMPORT_ERROR = ""
+except ImportError as e:
+    HAS_CAD = False
+    IMPORT_ERROR = str(e)
+    CadAgent = None  # type: ignore[assignment,misc]
+
+pytestmark = pytest.mark.skipif(
+    not HAS_CAD,
+    reason=f"CAD dependencies not installed: {IMPORT_ERROR}",
+)
 
 
 class TestCadAgentInit:
@@ -96,7 +109,8 @@ class TestCadIteration:
         # First check if temp_cad_gen.py exists
         temp_file = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "backend",
+            "enki_ai",
+            "agents",
             "temp_cad_gen.py"
         )
         

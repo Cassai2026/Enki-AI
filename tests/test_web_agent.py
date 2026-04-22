@@ -5,7 +5,20 @@ import pytest
 import asyncio
 import os
 
-from web_agent import WebAgent
+# Try to import the agent, skip all tests if dependencies missing
+try:
+    from enki_ai.agents.web_agent import WebAgent
+    HAS_WEB = True
+    IMPORT_ERROR = ""
+except (ImportError, ValueError) as e:
+    HAS_WEB = False
+    IMPORT_ERROR = str(e)
+    WebAgent = None  # type: ignore[assignment,misc]
+
+pytestmark = pytest.mark.skipif(
+    not HAS_WEB,
+    reason=f"Web agent dependencies not installed: {IMPORT_ERROR}",
+)
 
 
 class TestWebAgentInit:

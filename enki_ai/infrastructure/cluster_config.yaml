@@ -1,0 +1,15 @@
+﻿apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: enki-max-service
+spec:
+  serveConfigV2: |
+    applications:
+      - name: enki_max
+        route_prefix: "/"
+        import_path: enki_ai.core.sovereign_brain:build_app
+        args:
+          model_id: "ENKI-MAX-V1"
+          engine_kwargs:
+            tensor_parallel_size: 4
+            gpu_memory_utilization: 0.90

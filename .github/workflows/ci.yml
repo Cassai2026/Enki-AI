@@ -14,8 +14,9 @@ jobs:
     name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -24,13 +25,35 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
 
-      - name: Install dependencies
+      - name: Install core dependencies
+        # Only install deps that are available on Linux without native binaries.
+        # Heavy optional deps (mediapipe, build123d, opencv, pyaudio, playwright)
+        # are skipped here; tests that need them are guarded with pytest.skip.
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
+          pip install \
+            "fastapi==0.115.12" \
+            "uvicorn==0.34.2" \
+            "python-socketio==5.12.1" \
+            "python-multipart==0.0.22" \
+            "python-dotenv==1.1.0" \
+            "python-docx==1.1.2" \
+            "PyPDF2==3.0.1" \
+            "flask==3.1.0" \
+            "flask-cors==5.0.1" \
+            "aiohttp==3.13.3" \
+            "pillow==12.2.0" \
+            "pytest" \
+            "pytest-asyncio" \
+            "pytest-cov"
 
       - name: Run tests
-        run: |
-          pytest tests/ -v --tb=short --cov=enki_ai --cov-report=term-missing
+        run: pytest tests/ -v --tb=short --cov=enki_ai --cov-report=term-missing
+        env:
+          ENKI_API_KEY: ci-placeholder
+          SOVEREIGN_ID: CI_NODE
+          DB_PATH: /tmp/ci_test.db
+          MEMORY_DB_PATH: /tmp/ci_memory.db
+

@@ -1,0 +1,9 @@
+{
+    "mentee_id": "MENTEE_09",
+    "archetype": "Frequency Watcher",
+    "audit_result": {
+        "1": "45.00%",
+        "2": "35.00%"
+    },
+    "verdict": "\ud83d\udea8 STATIC_DETECTED"
+}

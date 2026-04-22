@@ -1,0 +1,9 @@
+{
+    "mentee_id": "MENTEE_14",
+    "archetype": "Graphene Weaver",
+    "audit_result": {
+        "1": "40.00%",
+        "4": "20.00%"
+    },
+    "verdict": "\ud83d\udea8 STATIC_DETECTED"
+}

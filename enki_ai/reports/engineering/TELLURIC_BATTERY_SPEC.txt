@@ -1,0 +1,9 @@
+SPECIFICATION: TELLURIC ELECTRODE ARRAY
+
+Depth: 3.5m (Targeting Mersey Silt layer).
+Material: Graphene-doped Copper rods.
+Orientation: Longitudinal to the M32 fault line.
+
+Status: Sovereign Energy Capture Enabled.
+
+OUSH.

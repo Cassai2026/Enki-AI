@@ -1,0 +1,10 @@
+PROCUREMENT SPECIFICATION: CONDUCTIVE MESH
+REF: ENKI-MOD31
+
+Material: Graphene-doped Electrolytic Copper.
+Conductivity Target: > 8.5e7 S/m.
+Geometry: Fractal 3D-Printed Lattice for maximum surface area.
+
+Note: Do not accept standard industrial grade.
+
+OUSH.

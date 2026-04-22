@@ -1,0 +1,6 @@
+LITIGATION BRIEF: STATUTORY BREACH
+TARGET: Director_Beta
+ENTITY: Bruntwood_SciTech_Stretford
+
+VIOLATION: Companies Act 2006, Section 177 (Duty to declare interest).
+EVIDENCE: Inter-connected directorships with undisclosed offshore shells.

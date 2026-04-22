@@ -1,0 +1,6 @@
+--- BRUNTWOOD SCITECH FORENSIC AUDIT ---
+ENTITY: Bruntwood_SciTech_LTD
+IDENTIFIED VALUE GAP: £14,000,000.00
+SUBSIDIARIES: Bruntwood_Stretford_Retail_LTD, Bruntwood_SciTech_Manchester_LTD
+VERDICT: Failure to deliver Social Value commensurate with Public Subsidy.
+ACTION: Prepare 'Notice of Equitable Reclamation'.

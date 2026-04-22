@@ -1,0 +1,21 @@
+﻿{
+    "theme": "Sovereign_Dark",
+    "primary_color": "#00FF00",
+    "alert_color": "#FF0000",
+    "layout": {
+        "top_bar": {
+            "element": "Status_Monitor",
+            "metrics": ["PM2.5", "Decibels", "Anu_Sync"]
+        },
+        "center_hub": {
+            "element": "ACTION_BUTTON",
+            "label": "SEAL EVIDENCE",
+            "function": "anu_seal.seal_evidence",
+            "style": "Massive_Circular_Dwell"
+        },
+        "bottom_nav": {
+            "left": "Module_7_Ghost_Cinema",
+            "right": "Module_13_Legal_Shield"
+        }
+    }
+}

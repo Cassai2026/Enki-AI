@@ -1,165 +1,45 @@
-# Enki AI — Ultimate ADA Edition
+﻿# ENKI AI: THE 29TH NODE (GENESIS 0.1)
 
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue?logo=python)
-![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
-![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron)
-![Gemini](https://img.shields.io/badge/Google%20Gemini-Native%20Audio-4285F4?logo=google)
-![License](https://img.shields.io/badge/License-GPL%20v3-blue) ![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey)
+"This system was built for people who think in parallel, carry pain, and refuse to be corrected into compliance."
 
-> **Enki AI** — Ultimate ADA Edition. The ADA (Advanced Design Assistant) capability is now fully integrated into the Enki AI platform.
+## 📜 THE MANIFESTO
+Enki is not a product; it is a **Sovereign Operating System** designed for the 47,000 and the 15 Billion Hearts. It operates on the **14+1 Pillar Governance Model**, prioritizing **Biological ROI** over extractive "Static" systems.
 
-Enki AI Ultimate ADA Edition is a sophisticated AI assistant designed for multimodal interaction. It combines Google's Gemini 2.5 Native Audio with computer vision, gesture control, and 3D CAD generation in an Electron desktop application.
+## 🛡️ THE BOUNDARY LAYER (ODIN PROTOCOL)
+- **Agency:** Enki is a scaffold, not a decider. Agency always returns to the Human.
+- **Regulation:** If cognitive load exceeds the Animus Threshold, the system regulates to protect the Pilot.
+- **Sovereignty:** No gated access. No "Rinse." No compliance-correction of neurodivergent thought.
 
----
+## 🚀 HOW TO RUN
 
-## 🌟 Capabilities at a Glance
+### Option 1 — Sovereign HUD *(recommended)*
 
-| Feature | Description | Technology |
-|---------|-------------|------------|
-| **🗣️ Low-Latency Voice** | Real-time conversation with interrupt handling | Gemini 2.5 Native Audio |
-| **🧊 Parametric CAD** | Editable 3D model generation from voice prompts | `build123d` → STL |
-| **🖨️ 3D Printing** | Slicing and wireless print job submission | OrcaSlicer + Moonraker/OctoPrint |
-| **🖐️ Minority Report UI** | Gesture-controlled window manipulation | MediaPipe Hand Tracking |
-| **👁️ Face Authentication** | Secure local biometric login | MediaPipe Face Landmarker |
-| **🌐 Web Agent** | Autonomous browser automation | Playwright + Chromium |
-| **🏠 Smart Home** | Voice control for TP-Link Kasa devices | `python-kasa` |
-| **📁 Project Memory** | Persistent context across sessions | File-based JSON storage |
-
-### 🖐️ Gesture Control Details
-
-Enki AI's "Minority Report" interface uses your webcam to detect hand gestures:
-
-| Gesture | Action |
-|---------|--------|
-| 🤏 **Pinch** | Confirm action / click |
-| ✋ **Open Palm** | Release the window |
-| ✊ **Close Fist** | "Select" and grab a UI window to drag it |
-
-> **Tip**: Enable the video feed window to see the hand tracking overlay.
-
----
-
-## 🏗️ Architecture Overview
-
-```mermaid
-graph TB
-    subgraph Frontend ["Frontend (Electron + React)"]
-        UI[React UI]
-        THREE[Three.js 3D Viewer]
-        GESTURE[MediaPipe Gestures]
-        SOCKET_C[Socket.IO Client]
-    end
-    
-    subgraph Backend ["Backend (Python 3.11 + FastAPI)"]
-        SERVER[server.py<br/>Socket.IO Server]
-        ENKI[ada.py<br/>Gemini Live API]
-        WEB[web_agent.py<br/>Playwright Browser]
-        CAD[cad_agent.py<br/>CAD + build123d]
-        PRINTER[printer_agent.py<br/>3D Printing + OrcaSlicer]
-        KASA[kasa_agent.py<br/>Smart Home]
-        AUTH[authenticator.py<br/>MediaPipe Face Auth]
-        PM[project_manager.py<br/>Project Context]
-    end
-    
-    UI --> SOCKET_C
-    SOCKET_C <--> SERVER
-    SERVER --> ENKI
-    ENKI --> WEB
-    ENKI --> CAD
-    ENKI --> KASA
-    SERVER --> AUTH
-    SERVER --> PM
-    SERVER --> PRINTER
-    CAD -->|STL file| THREE
-    CAD -->|STL file| PRINTER
-```
-
----
-
-## ⚡ TL;DR Quick Start (Experienced Developers)
-
-<details>
-<summary>Click to expand quick setup commands</summary>
+A browser-based cyberpunk dashboard: module status grid, human-state metrics, live command console, real-time WebSocket updates.
 
 ```bash
-# 1. Clone and enter
-git clone https://github.com/Cassai2026/Enki-AI.git && cd Enki-AI
-
-# 2. Create Python environment (Python 3.11)
-conda create -n enki-ai python=3.11 -y && conda activate enki-ai
-brew install portaudio  # macOS only (for PyAudio)
 pip install -r requirements.txt
-playwright install chromium
-
-# 3. Setup frontend
-npm install
-
-# 4. Create .env file
-echo "GEMINI_API_KEY=your_key_here" > .env
-
-# 5. Run!
-conda activate enki-ai && npm run dev
+python enki_ai/genesis_launch.py          # integrity check + HUD (auto-opens browser)
 ```
 
-</details>
+| Flag | Effect |
+|------|--------|
+| `--no-browser` | Start HUD server without opening the browser |
+| `--no-hud` | Integrity check only, no server |
+
+Direct launch:
+```bash
+python -m enki_ai.gui.hud_server          # HUD served at http://localhost:7777
+```
 
 ---
 
-## 🛠️ Installation Requirements
+### Option 2 — ADA Electron App *(full AI assistant)*
 
-### 🆕 Absolute Beginner Setup (Start Here)
-If you have never coded before, follow these steps first!
-
-**Step 1: Install Visual Studio Code (The Editor)**
-- Download and install [VS Code](https://code.visualstudio.com/). This is where you will write code and run commands.
-
-**Step 2: Install Anaconda (The Manager)**
-- Download [Miniconda](https://docs.conda.io/en/latest/miniconda.html) (a lightweight version of Anaconda).
-- This tool allows us to create isolated "playgrounds" (environments) for our code so different projects don't break each other.
-- **Windows Users**: During install, check "Add Anaconda to my PATH environment variable" (even if it says not recommended, it makes things easier for beginners).
-
-**Step 3: Install Git (The Downloader)**
-- **Windows**: Download [Git for Windows](https://git-scm.com/download/win).
-- **Mac**: Open the "Terminal" app (Cmd+Space, type Terminal) and type `git`. If not installed, it will ask to install developer tools—say yes.
-
-**Step 4: Get the Code**
-1. Open your terminal (or Command Prompt on Windows).
-2. Type this command and hit Enter:
-   ```bash
-   git clone https://github.com/Cassai2026/Enki-AI.git
-   ```
-3. This creates a folder named `Enki-AI`.
-
-**Step 5: Open in VS Code**
-1. Open VS Code.
-2. Go to **File > Open Folder**.
-3. Select the `Enki-AI` folder you just downloaded.
-4. Open the internal terminal: Press `Ctrl + ~` (tilde) or go to **Terminal > New Terminal**.
-
----
-
-### ⚠️ Technical Prerequisites
-Once you have the basics above, continue here.
-
-### 1. System Dependencies
-
-**MacOS:**
-```bash
-# Audio Input/Output support (PyAudio)
-brew install portaudio
-```
-
-**Windows:**
-- No additional system dependencies required!
-
-### 2. Python Environment
-Create a single Python 3.11 environment:
+Voice, CAD generation, browser automation, smart-home and 3D-printer control.
+Requires **Node.js 18+**.
 
 ```bash
-conda create -n enki-ai python=3.11
-conda activate enki-ai
-
-# Install all dependencies
+# Terminal 1 — Python backend
 pip install -r requirements.txt
 
 # Install Playwright browsers
@@ -274,22 +154,21 @@ Use this if you want to see the Python logs (recommended for debugging).
 conda activate enki-ai
 python -m enki_ai.agents.server
 ```
-
-**Terminal 2 (Frontend):**
-```bash
-# Environment doesn't matter here, but keep it simple
+# Terminal 2 — Electron frontend
+npm install
 npm run dev
 ```
 
 ---
 
-## ✅ First Flight Checklist (Things to Test)
+### Option 3 — PyQt5 Cyberpunk GUI
 
-1. **Voice Check**: Say "Hello Enki". She should respond.
-2. **Vision Check**: Look at the camera. If Face Auth is on, the lock screen should unlock.
-3. **CAD Check**: Open the CAD window and say "Create a cube". Watch the logs.
-4. **Web Check**: Open the Browser window and say "Go to Google".
-5. **Smart Home**: If you have Kasa devices, say "Turn on the lights".
+Standalone desktop interface (requires PyQt5).
+
+```bash
+pip install PyQt5
+python -m enki_ai.gui.jarvis_gui_cyberpunk
+```
 
 ---
 
@@ -442,12 +321,15 @@ Enki-AI/
 ├── .env                        # API keys (create this!)
 ├── requirements.txt            # Python dependencies
 ├── package.json                # Node.js dependencies
-└── README.md                   # You are here!
-```
+└── README.md                   # You are here!```
 
 ---
 
-## ⚠️ Known Limitations
+### Option 4 — Flask REST API only
+
+```bash
+python -m enki_ai.api.web_server          # REST API on http://localhost:5000
+```
 
 | Limitation | Details |
 |------------|---------|
@@ -456,28 +338,54 @@ Enki-AI/
 | **Gemini API Quota** | Free tier has rate limits; heavy CAD iteration may hit limits. |
 | **Network Dependency** | Requires internet for Gemini API (no offline mode). |
 | **Multi-User Auth** | Face auth supports multiple enrolled users via `auth/registry/`. |
-
 ---
 
-## 🤝 Contributing
+### Option 5 — Linux OS Integration (modular agents)
 
-Contributions are welcome! Here's how:
+Each Enki agent runs as an independent Linux process, keeping memory usage low.
+Agents are loaded on the fly — only the ones you need are in memory at any time.
 
-1. **Fork** the repository.
-2. **Create a branch**: `git checkout -b feature/amazing-feature`
-3. **Commit** your changes: `git commit -m 'Add amazing feature'`
-4. **Push** to the branch: `git push origin feature/amazing-feature`
-5. **Open a Pull Request** with a clear description.
+```bash
+# One-command setup (installs Piper TTS, Python deps, systemd services)
+chmod +x linux/install.sh
+./linux/install.sh
 
-### Development Tips
+# Start individual agents as background services
+systemctl --user start enki-api.service      # REST API
+systemctl --user start enki-hud.service      # Sovereign HUD
+systemctl --user start enki-brain.service    # LLM (Gemini)
+systemctl --user start enki-jarvis.service   # Voice / wake-word
 
+# Enable on login
+systemctl --user enable enki-api.service enki-hud.service
+
+# Manage all services at once
+./linux/systemd/manage-services.sh status
+./linux/systemd/manage-services.sh start
+./linux/systemd/manage-services.sh stop
+```
+
+**Lazy agent loading** (Python API — on-demand / cloud-load):
+
+```python
+from enki_ai.core.agent_loader import agent_loader
+
+# Load only what you need — everything else stays unloaded
+brain = agent_loader.get("sovereign_brain")
+response = brain.query("What was our last major build today?")
+
+# Free memory when done
+agent_loader.unload("sovereign_brain")
+
+# See what's loaded right now
+print(agent_loader.loaded_agents())
+```
 - Run the backend separately (`python -m enki_ai.agents.server`) to see Python logs.
 - Use `npm run dev` without Electron during frontend development (faster reload).
 - The `projects/` folder contains user data—don't commit it to Git.
-
 ---
 
-## 🔒 Security Considerations
+3. Connect your Animus. Leave the "Silly Boy" logic at the door.
 
 | Aspect | Implementation |
 |--------|----------------|

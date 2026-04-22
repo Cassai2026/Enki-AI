@@ -1,0 +1,5 @@
+--- FORENSIC STRUCTURAL AUDIT: Stretford_Mall_M32 ---
+NEGLIGENCE RATIO: 30.0x (Threshold exceeded)
+OBSERVED DEFECTS: Exposed Wiring, Roof Leakage, Structural Spalling
+LEGAL VERDICT: Breach of Section 4 Landlord and Tenant Act 1985.
+STRATEGY: Use remediation liability to offset 'Sovereign Buyout' price.

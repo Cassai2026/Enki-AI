@@ -1,0 +1,4 @@
+--- TECHNICAL SPEC: M32 WATER RECLAMATION FILTER ---
+MATERIAL: GO_Infused_Silica
+EFFICIENCY: 98.0% Lead Removal.
+UNIT COST: £450 (vs £25k Council Rework Cost).

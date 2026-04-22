@@ -1,0 +1,20 @@
+[Unit]
+Description=Enki-AI JARVIS Voice Core (wake-word listener)
+Documentation=https://github.com/Cassai2026/Enki-AI
+After=sound.target network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__REPO_ROOT__
+Environment="PATH=__VENV_DIR__/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=__REPO_ROOT__"
+EnvironmentFile=__REPO_ROOT__/.env
+# Piper needs a writable home dir and ALSA access
+ExecStart=__VENV_DIR__/bin/python -m enki_ai.core.jarvis_core
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

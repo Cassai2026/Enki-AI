@@ -328,7 +328,7 @@ def docs():
     """Simple docs landing page for API discovery."""
     return jsonify(
         {
-            "name": "JARVIS Form Database API Docs",
+            "name": "Enki AI Form Database API Docs",
             "openapi": "/openapi.json",
             "health": ["/health", "/api/health"],
         }

@@ -81,7 +81,7 @@ def _openapi_schema() -> dict[str, Any]:
     return {
         "openapi": "3.0.3",
         "info": {
-            "title": "JARVIS Form Database API",
+            "title": "Enki AI Form Database API",
             "version": "1.0.0",
             "description": "REST API for forms, data entries, and governance checks.",
         },

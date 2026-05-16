@@ -1,0 +1,4 @@
+# Optional audio dependency for local microphone capture in ADA desktop mode.
+# Keep separate from base requirements because this often needs system headers
+# and can fail on lightweight CI/dev environments.
+pyaudio

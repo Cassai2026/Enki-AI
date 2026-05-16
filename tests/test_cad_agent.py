@@ -4,6 +4,8 @@ Tests for CAD Generation Agent.
 import pytest
 import asyncio
 import os
+import sys
+import types
 
 # Try to import the agent, skip all tests if dependencies missing
 try:
@@ -11,9 +13,31 @@ try:
     HAS_CAD = True
     IMPORT_ERROR = ""
 except ImportError as e:
-    HAS_CAD = False
+    # Lightweight fallback mock so structural tests can still run without
+    # optional Gemini SDK dependencies.
     IMPORT_ERROR = str(e)
-    CadAgent = None  # type: ignore[assignment,misc]
+    google_mod = types.ModuleType("google")
+    genai_mod = types.ModuleType("google.genai")
+    types_mod = types.ModuleType("google.genai.types")
+
+    class _DummyClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    genai_mod.Client = _DummyClient  # type: ignore[attr-defined]
+    genai_mod.types = types_mod  # type: ignore[attr-defined]
+    google_mod.genai = genai_mod  # type: ignore[attr-defined]
+
+    sys.modules.setdefault("google", google_mod)
+    sys.modules.setdefault("google.genai", genai_mod)
+    sys.modules.setdefault("google.genai.types", types_mod)
+
+    try:
+        from enki_ai.agents.cad_agent import CadAgent
+        HAS_CAD = True
+    except ImportError:
+        HAS_CAD = False
+        CadAgent = None  # type: ignore[assignment,misc]
 
 pytestmark = pytest.mark.skipif(
     not HAS_CAD,

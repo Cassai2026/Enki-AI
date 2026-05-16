@@ -187,3 +187,18 @@ LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
 # here gives the rest of the codebase a single, consistent config source.
 GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-exp")
+
+
+class ConfigValidationError(RuntimeError):
+    """Raised when required runtime configuration is missing."""
+
+
+def require_env(name: str) -> str:
+    """Return a required environment variable or raise a clear error."""
+    value = os.environ.get(name, "").strip()
+    if value:
+        return value
+    raise ConfigValidationError(
+        f"Missing required environment variable '{name}'. "
+        "Set it in your environment or .env file before startup."
+    )

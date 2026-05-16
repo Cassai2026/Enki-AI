@@ -37,6 +37,28 @@ def test_health_returns_online(client):
     assert data["status"] == "online"
 
 
+def test_api_health_alias_returns_online(client):
+    resp = client.get("/api/health")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["status"] == "online"
+
+
+def test_openapi_json_available(client):
+    resp = client.get("/openapi.json")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["openapi"].startswith("3.")
+    assert "/api/governance/check" in body["paths"]
+
+
+def test_docs_endpoint_available(client):
+    resp = client.get("/docs")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["openapi"] == "/openapi.json"
+
+
 # ---------------------------------------------------------------------------
 # POST /api/submit-form
 # ---------------------------------------------------------------------------

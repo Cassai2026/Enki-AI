@@ -18,6 +18,8 @@ A browser-based cyberpunk dashboard: module status grid, human-state metrics, li
 
 ```bash
 pip install -r requirements.txt
+# Optional (desktop microphone features on some platforms)
+pip install -r requirements-optional.txt
 python enki_ai/genesis_launch.py          # integrity check + HUD (auto-opens browser)
 ```
 
@@ -41,6 +43,8 @@ Requires **Node.js 18+**.
 ```bash
 # Terminal 1 — Python backend
 pip install -r requirements.txt
+# Optional (desktop microphone features on some platforms)
+pip install -r requirements-optional.txt
 
 # Install Playwright browsers
 playwright install chromium
@@ -319,7 +323,8 @@ Enki-AI/
 │   └── main.js                 # Window & IPC setup
 ├── projects/                   # User project data (auto-created)
 ├── .env                        # API keys (create this!)
-├── requirements.txt            # Python dependencies
+├── requirements.txt            # Core Python dependencies
+├── requirements-optional.txt   # Optional Python dependencies (e.g. PyAudio)
 ├── package.json                # Node.js dependencies
 └── README.md                   # You are here!```
 
@@ -329,6 +334,18 @@ Enki-AI/
 
 ```bash
 python -m enki_ai.api.web_server          # REST API on http://localhost:5000
+```
+
+API docs:
+- `GET /docs` — API docs discovery payload
+- `GET /openapi.json` — OpenAPI 3 schema
+- `GET /health` and `GET /api/health` — health checks
+
+Developer shortcuts:
+```bash
+make test
+make build
+make run
 ```
 
 | Limitation | Details |
@@ -471,6 +488,7 @@ conda activate enki-ai
 # macOS: brew install portaudio
 # Ubuntu/Debian: sudo apt-get install -y portaudio19-dev
 pip install -r requirements.txt
+pip install -r requirements-optional.txt
 playwright install chromium
 
 # ── 3. Frontend ───────────────────────────────────────────────────────────

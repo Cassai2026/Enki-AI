@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import traceback
+import logging
 from dotenv import load_dotenv
 import cv2
 import pyaudio
@@ -25,6 +26,18 @@ if sys.version_info < (3, 11, 0):
 
 from enki_ai.agents.tools import tools_list
 from enki_ai.core.governance import engine as governance_engine
+from enki_ai.core import config as app_config
+
+log = logging.getLogger(__name__)
+
+
+def _log_print(*args, **kwargs):
+    if not args:
+        return
+    log.debug(" ".join(str(a) for a in args))
+
+
+print = _log_print  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
 # Spatial-gesture processing — hand-landmark pipeline for /ws/video-in frames
@@ -281,7 +294,12 @@ def _scan_for_binary_language(text: str) -> list[str]:
     return _BINARY_DIAGNOSTIC_PATTERN.findall(text)
 
 load_dotenv()
-client = genai.Client(http_options={"api_version": "v1beta"}, api_key=os.getenv("GEMINI_API_KEY"))
+_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+client = (
+    genai.Client(http_options={"api_version": "v1beta"}, api_key=_GEMINI_API_KEY)
+    if _GEMINI_API_KEY
+    else None
+)
 
 # Function definitions
 generate_cad = {
@@ -1514,6 +1532,11 @@ class AudioLoop:
     async def run(self, start_message=None):
         retry_delay = 1
         is_reconnect = False
+        if client is None:
+            raise app_config.ConfigValidationError(
+                "ADA live mode requires GEMINI_API_KEY. "
+                "Set GEMINI_API_KEY in your environment or .env before startup."
+            )
         
         while not self.stop_event.is_set():
             try:

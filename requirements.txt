@@ -9,7 +9,6 @@ flask-cors
 google-genai
 # Computer Vision & Audio
 opencv-python
-pyaudio
 pillow
 mss
 # Browser Automation

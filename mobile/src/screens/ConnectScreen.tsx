@@ -37,7 +37,15 @@ export default function ConnectScreen({ onConnected }: Props) {
       return;
     }
 
-    const url = serverUrl.trim().replace(/\/$/, '');
+    const raw = serverUrl.trim();
+    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
+    let url = withProtocol.replace(/\/$/, '');
+    try {
+      url = new URL(url).toString().replace(/\/$/, '');
+    } catch {
+      Alert.alert('Invalid URL', 'Please enter a valid server URL (e.g. http://192.168.1.100:8000).');
+      return;
+    }
     setConnecting(true);
 
     // Save for next time
@@ -90,6 +98,7 @@ export default function ConnectScreen({ onConnected }: Props) {
           Make sure your phone and the Enki AI server are on the{' '}
           <Text style={styles.hintBold}>same Wi-Fi network</Text>.
           {'\n'}Run <Text style={styles.code}>python backend/server.py</Text> on your desktop.
+          {'\n'}You can paste just an IP and port (for example: <Text style={styles.code}>192.168.1.100:8000</Text>).
         </Text>
 
         <TouchableOpacity

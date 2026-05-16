@@ -76,6 +76,36 @@ def _validate_form_data(form_data: Any) -> tuple[bool, str]:
     return True, ""
 
 
+def _openapi_schema() -> dict[str, Any]:
+    """Return a minimal OpenAPI 3.0 document for the REST API."""
+    return {
+        "openapi": "3.0.3",
+        "info": {
+            "title": "JARVIS Form Database API",
+            "version": "1.0.0",
+            "description": "REST API for forms, data entries, and governance checks.",
+        },
+        "paths": {
+            "/health": {"get": {"summary": "Health check"}},
+            "/api/health": {"get": {"summary": "Health check alias"}},
+            "/api/submit-form": {"post": {"summary": "Submit form data"}},
+            "/api/pending-reviews": {"get": {"summary": "List submissions pending review"}},
+            "/api/submissions": {"get": {"summary": "List recent submissions"}},
+            "/api/mark-reviewed/{submission_id}": {
+                "post": {"summary": "Mark a submission as reviewed"}
+            },
+            "/api/data": {"post": {"summary": "Add a key-value entry"}},
+            "/api/data/{category}": {"get": {"summary": "Get entries in a category"}},
+            "/api/data/{category}/{key}": {"get": {"summary": "Get latest value for key"}},
+            "/api/governance/laws": {"get": {"summary": "List governance laws"}},
+            "/api/governance/check": {"post": {"summary": "Check action against governance"}},
+            "/api/governance/audit-log": {
+                "get": {"summary": "Get governance decision audit log"}
+            },
+        },
+    }
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -276,12 +306,31 @@ def get_category_data(category: str):
 
 
 @app.route("/health", methods=["GET"])
+@app.route("/api/health", methods=["GET"])
 def health():
     """Health check endpoint."""
     return jsonify(
         {
             "status": "online",
             "database": "connected" if os.path.exists(db.db_path) else "not found",
+        }
+    )
+
+
+@app.route("/openapi.json", methods=["GET"])
+def openapi_json():
+    """Return OpenAPI schema."""
+    return jsonify(_openapi_schema())
+
+
+@app.route("/docs", methods=["GET"])
+def docs():
+    """Simple docs landing page for API discovery."""
+    return jsonify(
+        {
+            "name": "JARVIS Form Database API Docs",
+            "openapi": "/openapi.json",
+            "health": ["/health", "/api/health"],
         }
     )
 
@@ -462,9 +511,12 @@ def index():
                 "GET  /api/data/<category>": "All entries in a category",
                 "GET  /api/data/<category>/<key>": "Latest value for a key",
                 "GET  /health": "Health check",
+                "GET  /api/health": "Health check alias",
                 "GET  /api/governance/laws": "List all 10 governance laws",
                 "POST /api/governance/check": "Check action against governance model",
                 "GET  /api/governance/audit-log": "In-memory governance audit log",
+                "GET  /openapi.json": "OpenAPI 3 schema",
+                "GET  /docs": "API documentation discovery endpoint",
             },
         }
     )

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from playwright.async_api import async_playwright
 from google import genai
 from google.genai import types
+from enki_ai.core import config as app_config
 
 # 1. Load API Key
 load_dotenv()
@@ -19,9 +20,7 @@ MODEL_ID = "gemini-2.5-computer-use-preview-10-2025"
 
 class WebAgent:
     def __init__(self):
-        if not API_KEY:
-            raise ValueError("Please set GEMINI_API_KEY in your .env file")
-        self.client = genai.Client(api_key=API_KEY)
+        self.client = genai.Client(api_key=(API_KEY or app_config.require_env("GEMINI_API_KEY")))
         self.browser = None
         self.context = None
         self.page = None

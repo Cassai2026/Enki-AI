@@ -1,18 +1,35 @@
 import os
 import json
 import asyncio
+import logging
 from datetime import datetime
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from enki_ai.core import config as app_config
 
 load_dotenv()
+log = logging.getLogger(__name__)
+
+
+def _log_print(*args, **kwargs):
+    if not args:
+        return
+    log.debug(" ".join(str(a) for a in args))
+
+
+print = _log_print  # type: ignore[assignment]
 
 class CadAgent:
     def __init__(self, on_thought=None, on_status=None):
-        self.client = genai.Client(http_options={"api_version": "v1beta"}, api_key=os.getenv("GEMINI_API_KEY"))
+        self._api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        self.client = (
+            genai.Client(http_options={"api_version": "v1beta"}, api_key=self._api_key)
+            if self._api_key
+            else None
+        )
         # Using Gemini 2.5 Pro for thinking/streaming support
         self.model = "gemini-3-pro-preview"
         self.on_thought = on_thought  # Callback for streaming thoughts 
@@ -68,6 +85,11 @@ export_stl(result_part, 'output.stl')
             output_dir: Directory to save the script and STL. If None, uses temp dir.
         """
         print(f"[CadAgent DEBUG] [START] Generation started for: '{prompt}'")
+        if self.client is None:
+            raise app_config.ConfigValidationError(
+                "CAD generation requires GEMINI_API_KEY. "
+                "Set GEMINI_API_KEY in your environment or .env before starting."
+            )
         
         try:
             # Use provided output_dir or fall back to temp
@@ -246,6 +268,11 @@ Original request: {prompt}
             output_dir: Directory containing existing script and where to save new STL.
         """
         print(f"[CadAgent DEBUG] [START] Iteration started for: '{prompt}'")
+        if self.client is None:
+            raise app_config.ConfigValidationError(
+                "CAD iteration requires GEMINI_API_KEY. "
+                "Set GEMINI_API_KEY in your environment or .env before starting."
+            )
         
         # Use provided output_dir or fall back to temp
         if output_dir:

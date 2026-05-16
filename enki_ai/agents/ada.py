@@ -292,6 +292,8 @@ def _scan_for_binary_language(text: str) -> list[str]:
 
 load_dotenv()
 _GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+# Keep module import-safe when GEMINI_API_KEY is missing; the runtime guard in
+# AudioLoop.run() raises a clear configuration error before live connection.
 client = (
     genai.Client(http_options={"api_version": "v1beta"}, api_key=_GEMINI_API_KEY)
     if _GEMINI_API_KEY

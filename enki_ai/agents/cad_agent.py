@@ -21,6 +21,9 @@ def _debug_log(*args):
 
 class CadAgent:
     def __init__(self, on_thought=None, on_status=None):
+        # Keep initialization import-safe in environments without API keys so
+        # structural/unit tests can import this module; enforce key on first
+        # live generation call.
         self._api_key = os.getenv("GEMINI_API_KEY", "").strip()
         self.client = (
             genai.Client(http_options={"api_version": "v1beta"}, api_key=self._api_key)

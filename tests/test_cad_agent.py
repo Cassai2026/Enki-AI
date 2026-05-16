@@ -28,9 +28,9 @@ except ImportError as e:
     genai_mod.types = types_mod  # type: ignore[attr-defined]
     google_mod.genai = genai_mod  # type: ignore[attr-defined]
 
-    sys.modules.setdefault("google", google_mod)
-    sys.modules.setdefault("google.genai", genai_mod)
-    sys.modules.setdefault("google.genai.types", types_mod)
+    sys.modules["google"] = google_mod
+    sys.modules["google.genai"] = genai_mod
+    sys.modules["google.genai.types"] = types_mod
 
     try:
         from enki_ai.agents.cad_agent import CadAgent

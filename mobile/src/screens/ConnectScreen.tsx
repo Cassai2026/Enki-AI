@@ -75,7 +75,7 @@ export default function ConnectScreen({ onConnected }: Props) {
         } else if (status === 'disconnected') {
           setConnecting(false);
           const msg =
-            'Could not connect to the Enki AI backend. Confirm your phone and server are on the same Wi‑Fi, URL is correct, and backend is running.';
+            'Could not connect to the Enki AI backend. Confirm your phone and server are on the same Wi-Fi, URL is correct, and backend is running.';
           setErrorMsg(msg);
           void telemetryService.warn('connect_disconnected', msg, { url });
         }

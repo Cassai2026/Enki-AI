@@ -21,6 +21,10 @@ Out of scope for today:
 - iOS
 - Android
 
+## Version notes
+
+- `1.1.0`: MVP hardening release (env strategy, onboarding retry/recovery UX, reconnect handling, telemetry hooks, EAS build profile scaffolding, and updated release runbook).
+
 ## How it works
 
 ```

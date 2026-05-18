@@ -113,7 +113,11 @@ export class AudioService {
   // ---------------------------------------------------------------------------
 
   async startStreaming(onChunk: PcmSendCallback): Promise<void> {
-    if (this.isRecording) return;
+    if (this.isRecording) {
+      console.warn('[AudioService] startStreaming called while already recording.');
+      this.onError?.('Audio stream is already active.');
+      return;
+    }
     this.onPcmChunk = onChunk;
     this.isRecording = true;
     this._chunkTimings = [];

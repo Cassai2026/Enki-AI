@@ -49,4 +49,3 @@ export const appConfig = {
 export function sanitizeServerUrl(raw: string): string {
   return normalizeUrl(raw);
 }
-

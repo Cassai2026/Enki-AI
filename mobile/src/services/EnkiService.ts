@@ -71,9 +71,9 @@ class EnkiService {
       transports: ['websocket'],
       reconnectionAttempts: 5,
       timeout: 10000,
-      extraHeaders: this.sovereignToken
-        ? { 'X-Sovereign-Token': this.sovereignToken }
-        : undefined,
+      ...(this.sovereignToken
+        ? { extraHeaders: { 'X-Sovereign-Token': this.sovereignToken } }
+        : {}),
     });
 
     this.socket.on('connect', () => {

@@ -30,7 +30,14 @@ class TelemetryService {
 
     try {
       const existing = await AsyncStorage.getItem(STORAGE_KEY_TELEMETRY);
-      const parsed: TelemetryEvent[] = existing ? JSON.parse(existing) : [];
+      let parsed: TelemetryEvent[] = [];
+      if (existing) {
+        try {
+          parsed = JSON.parse(existing) as TelemetryEvent[];
+        } catch {
+          parsed = [];
+        }
+      }
       parsed.push(entry);
       const bounded = parsed.slice(-MAX_EVENTS);
       await AsyncStorage.setItem(STORAGE_KEY_TELEMETRY, JSON.stringify(bounded));
@@ -53,4 +60,3 @@ class TelemetryService {
 }
 
 export const telemetryService = new TelemetryService();
-

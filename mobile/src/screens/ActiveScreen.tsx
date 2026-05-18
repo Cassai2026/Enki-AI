@@ -843,7 +843,7 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
         } else if (status === 'disconnected') {
           setSessionState('idle');
           setStatusMsg('Disconnected');
-          setLastError('Reconnect failed. Verify server and Wi‑Fi, then retry.');
+          setLastError('Reconnect failed. Verify server and Wi-Fi, then retry.');
           void telemetryService.warn('reconnect_failed', 'Backend reconnection failed');
         }
       },
@@ -1104,7 +1104,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: '#1e1e1e',
-    gap: 10,
   },
   primaryBtn: {
     backgroundColor: '#7C6FCD',
@@ -1157,6 +1156,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   reconnectBtn: {
+    marginTop: 10,
     backgroundColor: '#141f2a',
     borderRadius: 12,
     paddingVertical: 12,

@@ -51,6 +51,7 @@ class EnkiService {
   private videoInWs: WebSocket | null = null;
   private callbacks: EnkiServiceCallbacks = {};
   private serverUrl: string = '';
+  private sovereignToken: string = '';
   private _status: ConnectionStatus = 'disconnected';
 
   // ---------------------------------------------------------------------------
@@ -69,6 +70,10 @@ class EnkiService {
     this.socket = io(this.serverUrl, {
       transports: ['websocket'],
       reconnectionAttempts: 5,
+      timeout: 10000,
+      extraHeaders: this.sovereignToken
+        ? { 'X-Sovereign-Token': this.sovereignToken }
+        : undefined,
     });
 
     this.socket.on('connect', () => {
@@ -118,6 +123,14 @@ class EnkiService {
     this.socket?.disconnect();
     this.socket = null;
     this._setStatus('disconnected');
+  }
+
+  updateCallbacks(callbacks: EnkiServiceCallbacks): void {
+    this.callbacks = callbacks;
+  }
+
+  setSovereignToken(token: string): void {
+    this.sovereignToken = token.trim();
   }
 
   // ---------------------------------------------------------------------------
@@ -177,7 +190,7 @@ class EnkiService {
   openAudioInStream(): Promise<void> {
     return new Promise((resolve, reject) => {
       const wsUrl = this.serverUrl.replace(/^http/, 'ws') + '/ws/audio-in';
-      this.audioInWs = new WebSocket(wsUrl);
+      this.audioInWs = this._createWebSocket(wsUrl);
       this.audioInWs.binaryType = 'arraybuffer';
 
       this.audioInWs.onopen = () => {
@@ -208,7 +221,7 @@ class EnkiService {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const wsUrl = this.serverUrl.replace(/^http/, 'ws') + '/ws/audio-out';
-      this.audioOutWs = new WebSocket(wsUrl);
+      this.audioOutWs = this._createWebSocket(wsUrl);
       this.audioOutWs.binaryType = 'arraybuffer';
 
       this.audioOutWs.onopen = () => {
@@ -251,7 +264,7 @@ class EnkiService {
   openVideoInStream(): Promise<void> {
     return new Promise((resolve, reject) => {
       const wsUrl = this.serverUrl.replace(/^http/, 'ws') + '/ws/video-in';
-      this.videoInWs = new WebSocket(wsUrl);
+      this.videoInWs = this._createWebSocket(wsUrl);
       this.videoInWs.binaryType = 'arraybuffer';
 
       this.videoInWs.onopen = () => {
@@ -299,9 +312,32 @@ class EnkiService {
     return this._status;
   }
 
+  get isConnected(): boolean {
+    return !!this.socket?.connected;
+  }
+
   private _setStatus(s: ConnectionStatus): void {
     this._status = s;
     this.callbacks.onConnectionChange?.(s);
+  }
+
+  private _createWebSocket(url: string): WebSocket {
+    const ReactNativeWebSocket = WebSocket as unknown as {
+      new (
+        url: string,
+        protocols?: string | string[],
+        options?: { headers?: Record<string, string> }
+      ): WebSocket;
+    };
+
+    if (this.sovereignToken) {
+      return new ReactNativeWebSocket(url, undefined, {
+        headers: {
+          'X-Sovereign-Token': this.sovereignToken,
+        },
+      });
+    }
+    return new ReactNativeWebSocket(url);
   }
 }
 

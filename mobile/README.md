@@ -2,6 +2,25 @@
 
 React Native (Expo) mobile app that bridges your **Meta Ray-Ban smart glasses** to the Enki AI backend.
 
+## MVP scope (locked for today)
+
+Core flow only:
+- Connect to a backend URL
+- Start/stop a live audio session
+- Stream mic PCM to Enki and play returned PCM through glasses
+- Show live transcription and actionable connection/session errors
+- Recover with in-app retry/reconnect controls
+
+Out of scope for today:
+- Wake-word engine integration
+- Production analytics backend
+- Camera-based vision shipping flow (endpoint is ready, integration remains optional)
+
+## Target platforms (today)
+
+- iOS
+- Android
+
 ## How it works
 
 ```
@@ -37,6 +56,7 @@ The Ray-Bans register with your phone as a standard Bluetooth HFP/HSP headset.  
 # From the repo root
 cd mobile
 npm install
+cp .env.example .env
 npx expo start
 ```
 
@@ -50,6 +70,14 @@ Scan the QR code with **Expo Go** on your phone.
 2. Tap **Connect**.
 3. Tap **▶ Start Session**.
 4. Speak through your Ray-Bans — Ada responds through the glasses speakers.
+5. If connect/start fails, use **Retry** or **Reconnect Backend** from the app UI.
+
+## Connectivity assumptions for real-device testing
+
+- Phone and backend machine must be on the same LAN/Wi-Fi.
+- Backend must be reachable from phone over `http://<lan-ip>:8000`.
+- If backend enforces `X-Sovereign-Token`, set `EXPO_PUBLIC_SOVEREIGN_TOKEN` in `.env`.
+- Bluetooth pairing is OS-managed: Ray-Bans must be paired before starting session.
 
 ---
 
@@ -59,12 +87,34 @@ When the companion app calls `start_audio` with `{ glasses_mode: true }`, the ba
 
 | Endpoint | Direction | Description |
 |---|---|---|
+| `Socket.IO connect` | App → Server | Control-plane connection (`websocket` transport) |
 | `Socket.IO start_audio` | App → Server | Starts Gemini Live session with network audio source |
+| `Socket.IO pause_audio` / `resume_audio` / `stop_audio` | App → Server | Session controls |
+| `Socket.IO signal_distortion` | App → Server | Notifies backend about elevated latency/jitter |
 | `ws://<host>:8000/ws/audio-in` | App → Server | Raw 16-bit PCM @ 16 kHz (mic from Ray-Bans) |
 | `ws://<host>:8000/ws/audio-out` | Server → App | Raw 16-bit PCM @ 24 kHz (Gemini speech output) |
 | `ws://<host>:8000/ws/video-in` | App → Server | JPEG frames from Ray-Ban camera (base64 or raw bytes) |
 | `Socket.IO transcription` | Server → App | Live conversation text |
 | `Socket.IO audio_data` | Server → App | Duplicate audio path via Socket.IO (for debugging) |
+
+Security note:
+- If backend `SOVEREIGN_TOKEN` is set, mobile must send `X-Sovereign-Token` for secured WebSocket endpoints.
+
+## Environment strategy
+
+The app supports environment-scoped defaults via `.env`:
+
+- `EXPO_PUBLIC_ENKI_ENV=dev|staging|prod`
+- `EXPO_PUBLIC_ENKI_BACKEND_URL_DEV`
+- `EXPO_PUBLIC_ENKI_BACKEND_URL_STAGING`
+- `EXPO_PUBLIC_ENKI_BACKEND_URL_PROD`
+- `EXPO_PUBLIC_SOVEREIGN_TOKEN` (optional; do not hardcode secrets in source)
+
+The connect screen now:
+- Prefills saved URL when available
+- Falls back to environment default URL
+- Validates URL format before connect
+- Shows explicit retry path on failures
 
 ---
 
@@ -104,3 +154,20 @@ The current implementation streams audio continuously while the session is activ
 | No audio through glasses | Make sure Ray-Bans are connected as the active Bluetooth device before tapping Start. |
 | Echo / feedback | Lower volume on Ray-Bans or enable `muted: true` on start and unmute manually. |
 | High latency | Reduce `CHUNK_DURATION_MS` in `AudioService.ts` (default 300 ms). Trade-off: more CPU. |
+
+## Privacy and compliance essentials
+
+- Microphone and Bluetooth permission strings are declared in `app.json`.
+- The app presents a data-flow disclosure on the connect screen.
+- Audio/video data is sent only to the configured Enki backend URL.
+- Store production secrets in EAS/CI secrets management, not in committed files.
+
+## Release runbook (internal testing → release candidate)
+
+1. Run real-device smoke tests on at least one iPhone and one Android device.
+2. Fix launch-blocking bugs only.
+3. Build internal binaries with EAS preview profiles.
+4. Collect tester feedback and prioritize launch blockers.
+5. Cut RC builds and run final regression pass.
+6. Submit to TestFlight / Play Internal Testing.
+7. Monitor connect/session stability and crash reports after rollout.

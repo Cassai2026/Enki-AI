@@ -24,6 +24,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -33,11 +34,13 @@ import {
 } from 'react-native';
 import { audioService } from '../services/AudioService';
 import {
+  EnkiServiceCallbacks,
   enkiService,
   ForensicDataEntry,
   GestureControlPacket,
   TranscriptionMessage,
 } from '../services/EnkiService';
+import { telemetryService } from '../services/TelemetryService';
 
 // ---------------------------------------------------------------------------
 // Governance Laws — 10 laws with associated keyword patterns.
@@ -628,15 +631,17 @@ interface Props {
   onDisconnect: () => void;
 }
 
-type SessionState = 'idle' | 'starting' | 'active' | 'stopping';
+type SessionState = 'idle' | 'starting' | 'active' | 'stopping' | 'reconnecting';
 
 export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
   const [sessionState, setSessionState] = useState<SessionState>('idle');
   const [muted, setMuted] = useState(false);
   const [statusMsg, setStatusMsg] = useState('Ready');
+  const [lastError, setLastError] = useState<string | null>(null);
   const [transcripts, setTranscripts] = useState<TranscriptionMessage[]>([]);
   const [latestTranscript, setLatestTranscript] = useState<TranscriptionMessage | null>(null);
   const flatListRef = useRef<FlatList<TranscriptionMessage>>(null);
+  const callbacksRef = useRef<EnkiServiceCallbacks | null>(null);
 
   // Holographic Cursor state — updated by gesture control packets from /ws/audio-out
   const [gesturePacket, setGesturePacket] = useState<GestureControlPacket | null>(null);
@@ -680,7 +685,7 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
   // Mount: wire up EnkiService callbacks
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    enkiService['callbacks'] = {
+    const callbacks: EnkiServiceCallbacks = {
       onStatus: (msg) => setStatusMsg(msg),
       onTranscription: (msg) => {
         setTranscripts((prev) => [...prev, msg]);
@@ -691,17 +696,37 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
       onError: (msg) => {
         Alert.alert('Enki Error', msg);
         setStatusMsg(`Error: ${msg}`);
+        setLastError(msg);
+        void telemetryService.error('session_error', msg);
       },
       onConnectionChange: (s) => {
         if (s === 'disconnected') {
           setSessionState('idle');
           setStatusMsg('Disconnected');
+          setLastError('Backend connection lost.');
+          audioService.cleanup();
+          void telemetryService.warn('connection_lost', 'Socket disconnected during active session');
         }
       },
     };
+    callbacksRef.current = callbacks;
+    enkiService.updateCallbacks(callbacks);
+
+    audioService.setSignalDistortionCallback((message) => {
+      setStatusMsg(message);
+      void telemetryService.warn('signal_distortion', message);
+      enkiService.reportSignalDistortion();
+    });
+    audioService.setErrorCallback((message) => {
+      setStatusMsg(message);
+      setLastError(message);
+      void telemetryService.warn('audio_warning', message);
+    });
 
     return () => {
       // Cleanup on unmount
+      audioService.setSignalDistortionCallback(null);
+      audioService.setErrorCallback(null);
       handleStop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -712,15 +737,27 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
   // ---------------------------------------------------------------------------
 
   const handleStart = useCallback(async () => {
+    if (sessionState === 'starting' || sessionState === 'active') return;
     setSessionState('starting');
     setStatusMsg('Starting session…');
+    setLastError(null);
+    void telemetryService.info('session_start_attempt', 'Attempting session start');
 
     try {
       // 1. Request mic permissions
       const granted = await audioService.requestPermissions();
       if (!granted) {
-        Alert.alert('Permission Required', 'Microphone permission is required.');
+        Alert.alert(
+          'Permission Required',
+          'Microphone permission is required. Enable it in system settings to continue.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
         setSessionState('idle');
+        setLastError('Microphone permission denied.');
+        void telemetryService.warn('permission_denied', 'Microphone permission denied by user');
         return;
       }
 
@@ -743,17 +780,20 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
       await enkiService.openAudioInStream();
 
       // 5. Start continuous mic streaming
-      audioService.startStreaming(sendAudioChunk);
+      await audioService.startStreaming(sendAudioChunk);
 
       setSessionState('active');
       setStatusMsg('Listening via Ray-Bans…');
+      void telemetryService.info('session_started', 'Mobile audio session started');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       Alert.alert('Start Failed', msg);
       setSessionState('idle');
       setStatusMsg('Ready');
+      setLastError(msg);
+      void telemetryService.error('session_start_failed', msg);
     }
-  }, []);
+  }, [sendAudioChunk, sessionState]);
 
   const handleStop = useCallback(() => {
     setSessionState('stopping');
@@ -762,6 +802,7 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
     enkiService.closeWebSockets();
     setSessionState('idle');
     setStatusMsg('Session stopped');
+    void telemetryService.info('session_stopped', 'Session stopped by user');
   }, []);
 
   const handleToggleMute = useCallback(() => {
@@ -783,6 +824,37 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
     enkiService.disconnect();
     onDisconnect();
   }, [handleStop, onDisconnect]);
+
+  const handleReconnect = useCallback(async () => {
+    setSessionState('reconnecting');
+    setStatusMsg('Reconnecting…');
+    setLastError(null);
+    void telemetryService.info('reconnect_attempt', 'Attempting reconnect to backend', { serverUrl });
+
+    enkiService.connect(serverUrl, {
+      onConnectionChange: (status) => {
+        if (status === 'connected') {
+          if (callbacksRef.current) {
+            enkiService.updateCallbacks(callbacksRef.current);
+          }
+          setSessionState('idle');
+          setStatusMsg('Reconnected');
+          void telemetryService.info('reconnect_success', 'Backend reconnection successful');
+        } else if (status === 'disconnected') {
+          setSessionState('idle');
+          setStatusMsg('Disconnected');
+          setLastError('Reconnect failed. Verify server and Wi-Fi, then retry.');
+          void telemetryService.warn('reconnect_failed', 'Backend reconnection failed');
+        }
+      },
+      onError: (msg) => {
+        setSessionState('idle');
+        setStatusMsg('Disconnected');
+        setLastError(msg);
+        void telemetryService.error('reconnect_error', msg);
+      },
+    });
+  }, [serverUrl]);
 
   // ---------------------------------------------------------------------------
   // Render helpers
@@ -816,6 +888,13 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
         <View style={[styles.statusDot, isActive && styles.statusDotActive]} />
         <Text style={styles.statusText}>{statusMsg}</Text>
       </View>
+
+      {!!lastError && sessionState !== 'active' && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerTitle}>Recovery action needed</Text>
+          <Text style={styles.errorBannerText}>{lastError}</Text>
+        </View>
+      )}
 
       {/* Transcription feed */}
       <FlatList<TranscriptionMessage>
@@ -852,6 +931,10 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
           <View style={[styles.primaryBtn, styles.primaryBtnDisabled]}>
             <Text style={styles.primaryBtnText}>Starting…</Text>
           </View>
+        ) : sessionState === 'reconnecting' ? (
+          <View style={[styles.primaryBtn, styles.primaryBtnDisabled]}>
+            <Text style={styles.primaryBtnText}>Reconnecting…</Text>
+          </View>
         ) : (
           <View style={styles.activeControls}>
             <TouchableOpacity
@@ -865,6 +948,11 @@ export default function ActiveScreen({ serverUrl, onDisconnect }: Props) {
               <Text style={styles.stopBtnText}>⏹ Stop</Text>
             </TouchableOpacity>
           </View>
+        )}
+        {sessionState === 'idle' && (
+          <TouchableOpacity style={styles.reconnectBtn} onPress={handleReconnect} activeOpacity={0.85}>
+            <Text style={styles.reconnectBtnText}>↻ Reconnect Backend</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -951,6 +1039,27 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     color: '#ccc',
+  },
+  errorBanner: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    backgroundColor: '#2a1414',
+    borderColor: '#5a1a1a',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorBannerTitle: {
+    color: '#ff7d7d',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  errorBannerText: {
+    color: '#e0b4b4',
+    fontSize: 12,
+    lineHeight: 17,
   },
 
   // Transcript
@@ -1044,6 +1153,20 @@ const styles = StyleSheet.create({
   stopBtnText: {
     color: '#ff6b6b',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  reconnectBtn: {
+    marginTop: 10,
+    backgroundColor: '#141f2a',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1f3550',
+  },
+  reconnectBtnText: {
+    color: '#9ec4ef',
+    fontSize: 14,
     fontWeight: '600',
   },
 

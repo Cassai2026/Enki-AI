@@ -12,50 +12,78 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { enkiService } from '../services/EnkiService';
+import { appConfig, sanitizeServerUrl } from '../config/appConfig';
+import { telemetryService } from '../services/TelemetryService';
 
 const STORAGE_KEY_SERVER = '@enki_server_url';
-const DEFAULT_URL = 'http://192.168.1.100:8000';
 
 interface Props {
   onConnected: (serverUrl: string) => void;
 }
 
 export default function ConnectScreen({ onConnected }: Props) {
-  const [serverUrl, setServerUrl] = useState(DEFAULT_URL);
+  const [serverUrl, setServerUrl] = useState(appConfig.defaultBackendUrl);
   const [connecting, setConnecting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>('');
 
   // Pre-fill last used URL on mount
   React.useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY_SERVER)
-      .then((saved) => { if (saved) setServerUrl(saved); })
+      .then((saved) => {
+        if (saved) setServerUrl(saved);
+      })
       .catch(() => {});
   }, []);
 
-  async function handleConnect() {
-    if (!serverUrl.trim()) {
+  async function handleConnect(targetUrl?: string) {
+    if (connecting) return;
+
+    const input = targetUrl ?? serverUrl;
+    if (!input.trim()) {
       Alert.alert('Missing URL', 'Please enter your Enki AI server address.');
       return;
     }
 
-    const url = serverUrl.trim().replace(/\/$/, '');
+    const url = sanitizeServerUrl(input);
+    if (!url) {
+      Alert.alert(
+        'Invalid URL',
+        'Enter a valid backend URL, for example http://192.168.1.100:8000'
+      );
+      return;
+    }
+
     setConnecting(true);
+    setErrorMsg('');
+    setServerUrl(url);
 
     // Save for next time
     await AsyncStorage.setItem(STORAGE_KEY_SERVER, url).catch(() => {});
+    enkiService.setSovereignToken(appConfig.sovereignToken);
+    void telemetryService.info('connect_attempt', 'Attempting backend connection', {
+      environment: appConfig.environment,
+      url,
+    });
 
     enkiService.connect(url, {
       onConnectionChange: (status) => {
         if (status === 'connected') {
           setConnecting(false);
+          setErrorMsg('');
+          void telemetryService.info('connect_success', 'Backend connection established', { url });
           onConnected(url);
         } else if (status === 'disconnected') {
           setConnecting(false);
-          Alert.alert('Connection Failed', 'Could not connect to the Enki AI backend. Check the server address and that the backend is running.');
+          const msg =
+            'Could not connect to the Enki AI backend. Confirm your phone and server are on the same Wi-Fi, URL is correct, and backend is running.';
+          setErrorMsg(msg);
+          void telemetryService.warn('connect_disconnected', msg, { url });
         }
       },
       onError: (msg) => {
         setConnecting(false);
-        Alert.alert('Error', msg);
+        setErrorMsg(msg);
+        void telemetryService.error('connect_error', msg, { url });
       },
     });
   }
@@ -70,6 +98,9 @@ export default function ConnectScreen({ onConnected }: Props) {
         <Text style={styles.logo}>⬡</Text>
         <Text style={styles.title}>Enki AI</Text>
         <Text style={styles.subtitle}>Meta Ray-Ban Companion</Text>
+        <Text style={styles.environmentBadge}>
+          {appConfig.environment.toUpperCase()} • iOS + Android
+        </Text>
 
         {/* Server URL input */}
         <Text style={styles.label}>Backend Server URL</Text>
@@ -82,7 +113,7 @@ export default function ConnectScreen({ onConnected }: Props) {
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
-          onSubmitEditing={handleConnect}
+          onSubmitEditing={() => handleConnect()}
           returnKeyType="go"
         />
 
@@ -94,7 +125,7 @@ export default function ConnectScreen({ onConnected }: Props) {
 
         <TouchableOpacity
           style={[styles.button, connecting && styles.buttonDisabled]}
-          onPress={handleConnect}
+          onPress={() => handleConnect()}
           disabled={connecting}
           activeOpacity={0.8}
         >
@@ -105,8 +136,26 @@ export default function ConnectScreen({ onConnected }: Props) {
           )}
         </TouchableOpacity>
 
+        {!!errorMsg && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorTitle}>Connection failed</Text>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => handleConnect(serverUrl)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <Text style={styles.footer}>
           Pair your Ray-Bans with this phone via Bluetooth before connecting.
+        </Text>
+        <Text style={styles.disclosure}>
+          By connecting, voice/audio streams are sent to your configured Enki server. If enabled by
+          your deployment, camera frames can also be forwarded for vision responses.
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -141,7 +190,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#888',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 10,
+  },
+  environmentBadge: {
+    alignSelf: 'center',
+    marginBottom: 26,
+    backgroundColor: '#121212',
+    color: '#8f8f8f',
+    borderWidth: 1,
+    borderColor: '#2f2f2f',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    fontWeight: '600',
   },
   label: {
     fontSize: 13,
@@ -197,5 +260,46 @@ const styles = StyleSheet.create({
     color: '#444',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  errorCard: {
+    marginBottom: 18,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#2a1414',
+    borderWidth: 1,
+    borderColor: '#5a1a1a',
+  },
+  errorTitle: {
+    color: '#ff7d7d',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  errorText: {
+    color: '#d7b4b4',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  retryButton: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: '#3a1a1a',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#6a2b2b',
+  },
+  retryButtonText: {
+    color: '#ffc7c7',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  disclosure: {
+    marginTop: 14,
+    fontSize: 11,
+    color: '#505050',
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

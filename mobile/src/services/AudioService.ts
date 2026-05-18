@@ -53,9 +53,11 @@ const CHUNK_DURATION_MS = 300;
 const JITTER_THRESHOLD_RATIO = 1.5;
 // Number of recent chunks to include in the rolling average.
 const JITTER_WINDOW = 5;
+const MAX_PLAYBACK_QUEUE_CHUNKS = 120;
 
 type PcmSendCallback = (pcmBytes: ArrayBuffer) => void;
 type SignalDistortionCallback = (message: string) => void;
+type AudioErrorCallback = (message: string) => void;
 
 export class AudioService {
   private recording: Audio.Recording | null = null;
@@ -67,6 +69,7 @@ export class AudioService {
 
   // Jitter / latency monitoring state
   private onSignalDistortion: SignalDistortionCallback | null = null;
+  private onError: AudioErrorCallback | null = null;
   private _chunkTimings: number[] = [];
   private _distortionActive = false;
 
@@ -101,11 +104,20 @@ export class AudioService {
     this.onSignalDistortion = cb;
   }
 
+  setErrorCallback(cb: AudioErrorCallback | null): void {
+    this.onError = cb;
+  }
+
   // ---------------------------------------------------------------------------
   // Recording
   // ---------------------------------------------------------------------------
 
   async startStreaming(onChunk: PcmSendCallback): Promise<void> {
+    if (this.isRecording) {
+      console.warn('[AudioService] startStreaming called while already recording.');
+      this.onError?.('Audio stream is already active.');
+      return;
+    }
     this.onPcmChunk = onChunk;
     this.isRecording = true;
     this._chunkTimings = [];
@@ -127,6 +139,7 @@ export class AudioService {
         await this._recordOneChunk();
       } catch (err) {
         console.error('[AudioService] Recording error:', err);
+        this.onError?.('Microphone stream interrupted. Attempting recovery…');
         await new Promise((r) => setTimeout(r, 100));
       }
     }
@@ -230,6 +243,11 @@ export class AudioService {
    * @param pcmBytes  16-bit LE PCM at RECV_SAMPLE_RATE (from Gemini via server)
    */
   enqueuePlayback(pcmBytes: ArrayBuffer): void {
+    if (this.playbackQueue.length >= MAX_PLAYBACK_QUEUE_CHUNKS) {
+      this.playbackQueue.shift();
+      console.warn('[AudioService] Playback queue full, dropping oldest chunk.');
+      this.onError?.('Audio backlog detected. Playback may sound delayed.');
+    }
     this.playbackQueue.push(pcmBytes);
     if (!this.isPlaying) {
       this._drainPlaybackQueue().catch(console.error);
@@ -277,6 +295,11 @@ export class AudioService {
       this.sound = null;
     } catch (err) {
       console.error('[AudioService] Playback error:', err);
+      this.onError?.('Playback failure detected. Waiting for next audio chunk…');
+      if (this.sound) {
+        await this.sound.unloadAsync().catch(() => {});
+      }
+      this.sound = null;
     }
   }
 

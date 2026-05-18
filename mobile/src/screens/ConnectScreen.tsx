@@ -125,7 +125,7 @@ export default function ConnectScreen({ onConnected }: Props) {
 
         <TouchableOpacity
           style={[styles.button, connecting && styles.buttonDisabled]}
-          onPress={handleConnect}
+          onPress={() => handleConnect()}
           disabled={connecting}
           activeOpacity={0.8}
         >

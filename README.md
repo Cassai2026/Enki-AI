@@ -67,6 +67,11 @@ Enki-AI/
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Engineering docs
+
+- [Architecture](docs/architecture.md)
+- [Roadmap](docs/roadmap.md)
+
 ## License
 
 - Code: [GPL-3.0](LICENSE)

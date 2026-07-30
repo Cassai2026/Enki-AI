@@ -13,8 +13,9 @@ Thanks for contributing. This guide defines the minimum engineering bar for chan
 ## Repository boundaries
 
 - **Core product code**: `enki_ai/`, `src/`, `electron/`, `backend/`
+- **Canonical knowledge-base modules**: `enki_ai/knowledge_base/`
 - **Tests**: `tests/`
-- **Operational docs**: `README.md`, `DATABASE_README.md`, `docs/architecture.md`, `docs/roadmap.md`
+- **Operational docs**: `README.md`, `DATABASE_README.md`, `docs/architecture.md`, `docs/roadmap.md`, `docs/release-checklist.md`
 - **Non-core/archived materials**: `docs/archive/` and experimental folders such as `mobile/`, `game_engine/`
 
 Do not add generated files or narrative artifacts to the repository root.

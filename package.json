@@ -5,7 +5,10 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && npx electron .\"",
-    "build": "vite build",
+    "build": "npm run build:frontend",
+    "build:frontend": "vite build",
+    "typecheck:backend": "python -m compileall enki_ai tests",
+    "test:backend": "python -m pytest tests/ -v --tb=short --cov=enki_ai --cov-report=term-missing",
     "start": "npx electron ."
   },
   "keywords": [],

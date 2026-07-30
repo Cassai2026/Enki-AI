@@ -71,6 +71,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
+- [Release checklist](docs/release-checklist.md)
 
 ## License
 

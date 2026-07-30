@@ -5,13 +5,13 @@
 - [x] Clean root-level repository surface
 - [x] Archive non-core legacy artifacts
 - [x] Establish baseline CI checks
-- [ ] Finalize canonical module layout and remove duplicated paths
+- [x] Finalize canonical module layout and remove duplicated paths
 
 ## Phase 2: Engineering reliability
 
-- [ ] Add explicit frontend lint/typecheck scripts and enforce in CI
+- [x] Add explicit backend typecheck and frontend build checks in CI
 - [ ] Expand targeted tests for critical agent workflows
-- [ ] Introduce release checklist and tagged release process
+- [x] Introduce release checklist baseline
 
 ## Phase 3: Product hardening
 

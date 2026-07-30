@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  python-tests:
     name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
@@ -57,3 +57,20 @@ jobs:
           DB_PATH: /tmp/ci_test.db
           MEMORY_DB_PATH: /tmp/ci_memory.db
 
+  frontend-build:
+    name: Frontend build (Node 20)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build

@@ -57,6 +57,7 @@ projects/
 # Docs binary files (contain user documents; not committed)
 docs/*.docx
 docs/*.pdf
+docs/archive/generated/*.txt
 
 # Browser / session state files (may contain auth tokens)
 fb_state.json
